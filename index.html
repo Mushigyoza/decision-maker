@@ -1538,7 +1538,9 @@ ${optText}
     const data = await res.json();
     let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     text = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(text);
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('找不到 JSON 格式回應');
+    const parsed = JSON.parse(jsonMatch[0]);
     aiAnalysisResult = parsed;
 
     const suggestOpt = opts[OPTION_LETTERS.indexOf(parsed.suggest)] || parsed.suggest;
