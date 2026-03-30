@@ -868,22 +868,28 @@ async function saveDecision(mode){
   const type=document.getElementById('f-type').value;
   const opts=getOpts();
 
-  if(!title){alert('請填寫猶豫內容');goPane(1);return;}
-  if(!type){alert('請選擇類型');goPane(1);return;}
-  if(opts.length<2){alert('請填至少2個選項');goPane(2);return;}
+  if(!title){alert('請先填寫猶豫內容（步驟1）');goPane(1);return;}
+  if(!type){alert('請先選擇決策類型（步驟1）');goPane(1);return;}
+  if(opts.length<2){alert('請填寫至少2個選項（步驟2）');goPane(2);return;}
 
-  // If mode=decided but no final choice selected, warn
   if(mode==='decided'&&!selFinal){
     if(!confirm('還沒選擇最終選項，確定要儲存為「已決策」嗎？'))return;
   }
 
-  const rd=new Date();rd.setDate(rd.getDate()+7);
+  const draftBtn=document.getElementById('save-draft-btn');
+  const finalBtn=document.getElementById('save-final-btn');
+  const origDraft=draftBtn.textContent;
+  const origFinal=finalBtn.textContent;
+  draftBtn.disabled=true; draftBtn.textContent='儲存中…';
+  finalBtn.disabled=true; finalBtn.textContent='儲存中…';
+
+  const rd=new Date(); rd.setDate(rd.getDate()+7);
 
   const payload={
     title,type,options:opts,
     tendency:selTend||null,
     amount:document.getElementById('f-amount').value?parseFloat(document.getElementById('f-amount').value):null,
-    currency:document.getElementById('f-cur').value,
+    currency:document.getElementById('f-cur').value||'TWD',
     context:document.getElementById('f-ctx').value.trim()||null,
     ai_analysis:aiRes||null,
     ai_suggest:aiRes?.suggest||null,
@@ -891,34 +897,36 @@ async function saveDecision(mode){
     adopted:selAdopt||null,
     reject_reason:document.getElementById('f-reject')?.value||null,
     final_choice:selFinal||null,
-    decision_delay:parseInt(document.getElementById('f-delay').value)||0,
+    decision_delay:parseInt(document.getElementById('f-delay')?.value)||0,
     review_due:mode==='decided'?rd.toISOString().split('T')[0]:null
   };
 
-  // Disable buttons
-  document.getElementById('save-draft-btn').disabled=true;
-  document.getElementById('save-final-btn').disabled=true;
-
-  let error;
-  if(editId){
-    // UPDATE existing draft
-    const res=await DB.from('decisions').update(payload).eq('id',editId).eq('user_id',ME.id);
-    error=res.error;
-  } else {
-    // INSERT new
-    payload.user_id=ME.id;
-    const res=await DB.from('decisions').insert([payload]);
-    error=res.error;
+  try{
+    let error;
+    if(editId){
+      const res=await DB.from('decisions').update(payload).eq('id',editId).eq('user_id',ME.id);
+      error=res.error;
+    } else {
+      payload.user_id=ME.id;
+      const res=await DB.from('decisions').insert([payload]);
+      error=res.error;
+    }
+    if(error){
+      alert('儲存失敗：'+error.message);
+      console.error('save error:',error);
+      draftBtn.disabled=false; draftBtn.textContent=origDraft;
+      finalBtn.disabled=false; finalBtn.textContent=origFinal;
+      return;
+    }
+    editId=null;
+    await loadData();
+    showPage('list');
+  } catch(e){
+    alert('發生錯誤：'+e.message);
+    console.error('save exception:',e);
+    draftBtn.disabled=false; draftBtn.textContent=origDraft;
+    finalBtn.disabled=false; finalBtn.textContent=origFinal;
   }
-
-  document.getElementById('save-draft-btn').disabled=false;
-  document.getElementById('save-final-btn').disabled=false;
-
-  if(error){alert('儲存失敗：'+error.message);console.error('save error:',error);return;}
-
-  editId=null;
-  await loadData();
-  showPage('list');
 }
 
 // ── STATS ────────────────────────────────
