@@ -260,7 +260,15 @@ textarea{resize:vertical;min-height:78px}
 <!-- AUTH -->
 <div id="auth-screen">
   <div class="auth-card">
-    <div class="auth-logo"><svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V9l-6-6H9zm0 0v6h6M9 13h6M9 17h4"/></svg></div>
+    <div style="width:72px;height:72px;background:linear-gradient(140deg,#8B7AAE,#C5919E);border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem;box-shadow:0 6px 20px rgba(139,122,174,.42)"><svg viewBox="0 0 40 40" width="40" height="40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="6" y="13" width="28" height="17" rx="8" fill="white"/>
+  <rect x="10" y="19" width="6" height="2" rx="1" fill="#8B7AAE"/>
+  <rect x="12" y="17" width="2" height="6" rx="1" fill="#8B7AAE"/>
+  <circle cx="27" cy="18.5" r="1.5" fill="#C5919E"/>
+  <circle cx="30.5" cy="21" r="1.5" fill="#8B7AAE"/>
+  <circle cx="27" cy="23.5" r="1.5" fill="#7E9CB6"/>
+  <circle cx="23.5" cy="21" r="1.5" fill="#C4B8D8"/>
+</svg></div>
     <div class="auth-title">決策助手</div>
     <div class="auth-sub">記錄每個選擇，找到你的決策模式</div>
 
@@ -298,7 +306,15 @@ textarea{resize:vertical;min-height:78px}
 <div id="app-screen">
   <div class="app-header">
     <div class="header-brand">
-      <div class="brand-icon"><svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V9l-6-6H9zm0 0v6h6M9 13h6M9 17h4"/></svg></div>
+      <div style="width:32px;height:32px;background:linear-gradient(140deg,#8B7AAE,#C5919E);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 6px rgba(139,122,174,.4)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="8" width="18" height="11" rx="5" fill="white"/>
+  <rect x="5.5" y="12" width="4" height="1.5" rx="0.75" fill="#8B7AAE"/>
+  <rect x="7" y="10.5" width="1.5" height="4" rx="0.75" fill="#8B7AAE"/>
+  <circle cx="16.5" cy="11.5" r="1" fill="#C5919E"/>
+  <circle cx="18.5" cy="13" r="1" fill="#8B7AAE"/>
+  <circle cx="16.5" cy="14.5" r="1" fill="#7E9CB6"/>
+  <circle cx="14.5" cy="13" r="1" fill="#C4B8D8"/>
+</svg></div>
       決策助手
     </div>
     <div class="header-actions">
@@ -559,12 +575,40 @@ function showPage(p){
 }
 
 // ── DATA ────────────────────────────────
+async function getToken(){
+  // Try localStorage first (fast, no lock)
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k&&(k.includes('auth')||k.includes('supabase')||k.includes('dm_auth'))){
+      try{
+        const v=JSON.parse(localStorage.getItem(k));
+        if(v?.access_token) return v.access_token;
+        if(v?.currentSession?.access_token) return v.currentSession.access_token;
+      }catch(e){}
+    }
+  }
+  // Fallback to getSession
+  try{
+    const {data:{session}}=await DB.auth.getSession();
+    return session?.access_token||null;
+  }catch(e){ return null; }
+}
+
 async function loadData(){
-  if(!DB||!ME)return;
-  const {data,error}=await DB.from('decisions').select('*').eq('user_id',ME.id).order('created_at',{ascending:false});
-  if(error){console.error('loadData error:',error);return;}
-  DATA=data||[];
-  renderList();
+  if(!ME) return;
+  const c=getCfg();
+  if(!c.url||!c.supa){ DATA=[]; renderList(); return; }
+  try{
+    const token=await getToken();
+    if(!token){ DATA=[]; renderList(); return; }
+    const res=await fetch(
+      c.url+'/rest/v1/decisions?user_id=eq.'+ME.id+'&order=created_at.desc&select=*',
+      { headers:{'apikey':c.supa,'Authorization':'Bearer '+token,'Content-Type':'application/json'} }
+    );
+    if(!res.ok){ console.error('loadData HTTP',res.status); DATA=[]; renderList(); return; }
+    DATA=await res.json();
+    renderList();
+  }catch(e){ console.error('loadData error:',e); DATA=[]; renderList(); }
 }
 
 function getStatus(d){
@@ -710,10 +754,15 @@ async function quickFinalize(id){
   if(!d)return;
   if(!confirm('確定要將這筆決策標記為「已決策」嗎？'))return;
   const rd=new Date();rd.setDate(rd.getDate()+7);
-  const {error}=await DB.from('decisions')
-    .update({review_due:rd.toISOString().split('T')[0]})
-    .eq('id',id).eq('user_id',ME.id);
-  if(error){alert('更新失敗：'+error.message);return;}
+  try{
+    const c=getCfg(); const token=await getToken();
+    const res=await fetch(c.url+'/rest/v1/decisions?id=eq.'+id+'&user_id=eq.'+ME.id,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','apikey':c.supa,'Authorization':'Bearer '+token,'Prefer':'return=minimal'},
+      body:JSON.stringify({review_due:rd.toISOString().split('T')[0]})
+    });
+    if(!res.ok){alert('更新失敗：'+res.status);return;}
+  }catch(e){alert('發生錯誤：'+e.message);return;}
   await loadData();
   const u=DATA.find(x=>x.id===id);if(u)renderDetail(u);
 }
@@ -823,20 +872,31 @@ async function saveReview(id){
   const reg=document.getElementById('rv-reg').value;
   if(!sat){alert('請填滿意度');return;}
   if(!reg){alert('請選是否後悔');return;}
-  const {error}=await DB.from('decisions').update({
-    satisfaction:sat,regret:reg==='是',
-    revisit:document.getElementById('rv-rev').value,
-    regret_reason:document.getElementById('rv-rr')?.value||''
-  }).eq('id',id).eq('user_id',ME.id);
-  if(error){alert('儲存失敗：'+error.message);return;}
+  try{
+    const c=getCfg(); const token=await getToken();
+    if(!token){alert('登入已過期，請重新登入');return;}
+    const res=await fetch(c.url+'/rest/v1/decisions?id=eq.'+id+'&user_id=eq.'+ME.id,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','apikey':c.supa,'Authorization':'Bearer '+token,'Prefer':'return=minimal'},
+      body:JSON.stringify({satisfaction:sat,regret:reg==='是',revisit:document.getElementById('rv-rev').value,regret_reason:document.getElementById('rv-rr')?.value||''})
+    });
+    if(!res.ok){alert('儲存失敗：'+res.status);return;}
+  }catch(e){alert('發生錯誤：'+e.message);return;}
   await loadData();
   const u=DATA.find(x=>x.id===id);if(u)renderDetail(u);
 }
 
 async function delDecision(id){
   if(!confirm('確定刪除？'))return;
-  const {error}=await DB.from('decisions').delete().eq('id',id).eq('user_id',ME.id);
-  if(error){alert('刪除失敗：'+error.message);return;}
+  try{
+    const c=getCfg(); const token=await getToken();
+    if(!token){alert('登入已過期，請重新登入');return;}
+    const res=await fetch(c.url+'/rest/v1/decisions?id=eq.'+id+'&user_id=eq.'+ME.id,{
+      method:'DELETE',
+      headers:{'apikey':c.supa,'Authorization':'Bearer '+token}
+    });
+    if(!res.ok){alert('刪除失敗：'+res.status);return;}
+  }catch(e){alert('發生錯誤：'+e.message);return;}
   await loadData();showPage('list');
 }
 
@@ -1065,67 +1125,72 @@ async function saveDecision(mode){
     finalBtn.disabled=false; finalBtn.textContent=origFinal;
   };
 
-  // Timeout protection: if no response in 10s, show error
-  const timeoutId = setTimeout(()=>{
-    showSaveMsg('儲存逾時，請檢查網路後再試。',false);
-    resetBtns();
-  }, 10000);
-
   try{
-    // Get fresh token to avoid Safari stale token issue
-    const { data: { session } } = await DB.auth.getSession();
-    if(!session){
-      clearTimeout(timeoutId);
-      showSaveMsg('登入已過期，請重新登入。',false);
-      resetBtns();
-      return;
+    const c = getCfg();
+    if(!c.url||!c.supa){
+      showSaveMsg('請先完成設定（⚙️）', false);
+      resetBtns(); return;
     }
 
-    // Use REST API directly to bypass Supabase JS lock issues on Safari
-    const c = getCfg();
+    // Get token from localStorage directly (bypasses Supabase JS lock)
+    let accessToken = null;
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(k&&(k.includes('auth')||k.includes('token')||k.includes('supabase'))){
+        try{
+          const v=JSON.parse(localStorage.getItem(k));
+          if(v&&v.access_token){ accessToken=v.access_token; break; }
+          if(v&&v.currentSession&&v.currentSession.access_token){ accessToken=v.currentSession.access_token; break; }
+        }catch(e){}
+      }
+    }
+
+    // Fallback: try getSession with timeout
+    if(!accessToken){
+      try{
+        const p = DB.auth.getSession();
+        const t = new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),5000));
+        const {data:{session}} = await Promise.race([p,t]);
+        if(session) accessToken=session.access_token;
+      }catch(e){ console.warn('getSession fallback failed:',e.message); }
+    }
+
+    if(!accessToken){
+      showSaveMsg('無法取得登入憑證，請重新登出再登入。', false);
+      resetBtns(); return;
+    }
+
     const baseUrl = c.url + '/rest/v1/decisions';
     const headers = {
       'Content-Type': 'application/json',
       'apikey': c.supa,
-      'Authorization': 'Bearer ' + session.access_token,
+      'Authorization': 'Bearer ' + accessToken,
       'Prefer': 'return=minimal'
     };
 
     let res;
     if(editId){
-      res = await fetch(baseUrl + '?id=eq.' + editId + '&user_id=eq.' + ME.id, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify(payload)
-      });
+      res = await fetch(baseUrl+'?id=eq.'+editId+'&user_id=eq.'+ME.id,{method:'PATCH',headers,body:JSON.stringify(payload)});
     } else {
-      payload.user_id = ME.id;
-      res = await fetch(baseUrl, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload)
-      });
+      payload.user_id=ME.id;
+      res = await fetch(baseUrl,{method:'POST',headers,body:JSON.stringify(payload)});
     }
-
-    clearTimeout(timeoutId);
 
     if(!res.ok){
-      const errText = await res.text();
-      console.error('REST error:', res.status, errText);
-      showSaveMsg('儲存失敗（' + res.status + '）：' + errText, false);
-      resetBtns();
-      return;
+      const errText=await res.text();
+      console.error('REST error:',res.status,errText);
+      showSaveMsg('儲存失敗（'+res.status+'）：'+errText.slice(0,120),false);
+      resetBtns(); return;
     }
 
-    showSaveMsg('✓ 儲存成功！正在跳轉…', true);
-    editId = null;
+    showSaveMsg('✓ 儲存成功！正在跳轉…',true);
+    editId=null;
     await loadData();
-    setTimeout(()=>showPage('list'), 800);
+    setTimeout(()=>showPage('list'),800);
 
-  } catch(e){
-    clearTimeout(timeoutId);
-    console.error('Save exception:', e);
-    showSaveMsg('發生錯誤：' + e.message, false);
+  }catch(e){
+    console.error('Save exception:',e);
+    showSaveMsg('發生錯誤：'+e.message,false);
     resetBtns();
   }
 }
