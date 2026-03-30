@@ -227,13 +227,32 @@ textarea{resize:vertical;min-height:78px}
 <div class="overlay" id="settings-overlay">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">⚙️ API 設定</div>
-    <div class="sheet-sub">金鑰只儲存在你的瀏覽器裡，不會外洩。換裝置或換瀏覽器時需重新填入。</div>
-    <div class="form-group"><label class="form-label">Supabase URL</label><input type="text" id="cfg-url" placeholder="https://xxxxxxxx.supabase.co" autocomplete="off" /></div>
-    <div class="form-group"><label class="form-label">Supabase Publishable Key</label><input type="password" id="cfg-supa" placeholder="eyJ..." autocomplete="off" /></div>
-    <div class="form-group"><label class="form-label">AI API Key</label><input type="password" id="cfg-ai" placeholder="AIzaSy... 或 sk-ant-..." autocomplete="off" /><div class="note">Gemini 免費版填 AIzaSy 開頭；Claude API 填 sk-ant 開頭</div></div>
-    <div class="form-group"><label class="form-label">AI 服務</label><select id="cfg-ai-type"><option value="gemini">Google Gemini（免費）</option><option value="claude">Claude API（付費）</option></select></div>
-    <button class="btn btn-primary" onclick="saveSettings()">儲存並繼續</button>
+    <div class="sheet-title">⚙️ 初始設定</div>
+    <div class="sheet-sub">第一次使用請填入以下資訊。設定只儲存在你的瀏覽器裡，不會外洩。換裝置時需重新填入一次。</div>
+
+    <div style="background:var(--accent-l);border-radius:var(--r-sm);padding:10px 12px;font-size:13px;color:var(--accent-d);margin-bottom:1rem">
+      📌 Supabase URL 和 Key 請向管理員索取，或從 Supabase 後台取得。
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Supabase URL ＊</label>
+      <input type="text" id="cfg-url" placeholder="https://xxxxxxxx.supabase.co" autocomplete="off" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Supabase Publishable Key ＊</label>
+      <input type="password" id="cfg-supa" placeholder="eyJ..." autocomplete="off" />
+    </div>
+    <div style="height:1px;background:var(--border);margin:1rem 0"></div>
+    <div class="form-group">
+      <label class="form-label">AI API Key（選填，AI 分析功能需要）</label>
+      <input type="password" id="cfg-ai" placeholder="AIzaSy... 或 sk-ant-..." autocomplete="off" />
+      <div class="note">Gemini 免費版填 AIzaSy 開頭；Claude API 填 sk-ant 開頭。不填也能使用，只是沒有 AI 分析功能。</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">AI 服務</label>
+      <select id="cfg-ai-type"><option value="gemini">Google Gemini（免費）</option><option value="claude">Claude API（付費）</option></select>
+    </div>
+    <button class="btn btn-primary" onclick="saveSettings()">儲存並登入</button>
     <div class="err-msg" id="cfg-err"></div>
   </div>
 </div>
@@ -244,6 +263,13 @@ textarea{resize:vertical;min-height:78px}
     <div class="auth-logo"><svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V9l-6-6H9zm0 0v6h6M9 13h6M9 17h4"/></svg></div>
     <div class="auth-title">決策助手</div>
     <div class="auth-sub">記錄每個選擇，找到你的決策模式</div>
+
+    <!-- 首次使用提示：沒有設定時才顯示 -->
+    <div id="first-time-banner" style="display:none;background:var(--accent-l);border:1.5px solid var(--accent-m);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:1rem;font-size:13px;color:var(--accent-d)">
+      👋 首次使用？請先完成設定再登入。
+      <button onclick="openSettings()" style="display:block;width:100%;margin-top:8px;padding:8px;background:var(--accent);color:white;border:none;border-radius:7px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer">⚙️ 前往設定</button>
+    </div>
+
     <div class="tab-bar">
       <button class="tab-btn active" onclick="switchTab('login')">登入</button>
       <button class="tab-btn" onclick="switchTab('register')">註冊</button>
@@ -260,6 +286,10 @@ textarea{resize:vertical;min-height:78px}
       <button class="btn btn-primary" id="r-btn" onclick="doRegister()">建立帳號</button>
       <div class="err-msg" id="r-err"></div>
       <div class="ok-msg" id="r-ok"></div>
+    </div>
+    <!-- 已設定過：顯示小連結讓使用者可以修改設定 -->
+    <div id="change-settings-link" style="display:none;text-align:center;margin-top:1rem">
+      <button onclick="openSettings()" style="background:none;border:none;color:var(--text3);font-size:12px;font-family:inherit;cursor:pointer;text-decoration:underline">修改 API 設定</button>
     </div>
   </div>
 </div>
@@ -357,6 +387,7 @@ textarea{resize:vertical;min-height:78px}
       <div class="btn-row">
         <button class="btn btn-secondary" onclick="goPane(3)">← 上一步</button>
       </div>
+      <div id="save-msg" style="display:none;border-radius:9px;padding:12px 14px;font-size:14px;margin-top:10px;text-align:center"></div>
       <div style="margin-top:10px;display:flex;flex-direction:column;gap:10px">
         <button class="btn btn-draft" id="save-draft-btn" onclick="saveDecision('draft')">📌 暫存考慮中</button>
         <button class="btn btn-primary" id="save-final-btn" onclick="saveDecision('decided')">✓ 儲存完整決策</button>
@@ -399,8 +430,10 @@ function getCfg(){try{return JSON.parse(localStorage.getItem(CFG))||{};}catch(e)
 
 function openSettings(){
   const c=getCfg();
-  document.getElementById('cfg-url').value=c.url||'';
-  document.getElementById('cfg-supa').value=c.supa||'';
+  const urlEl=document.getElementById('cfg-url');
+  const supaEl=document.getElementById('cfg-supa');
+  if(urlEl) urlEl.value=c.url||'';
+  if(supaEl) supaEl.value=c.supa||'';
   document.getElementById('cfg-ai').value=c.ai||'';
   document.getElementById('cfg-ai-type').value=c.aiType||'gemini';
   document.getElementById('settings-overlay').classList.add('show');
@@ -413,9 +446,12 @@ function saveSettings(){
   const aiType=document.getElementById('cfg-ai-type').value;
   const err=document.getElementById('cfg-err');
   err.style.display='none';
-  if(!url||!supa){err.textContent='請填入 Supabase URL 和 Publishable Key';err.style.display='block';return;}
+  if(!url){err.textContent='請填入 Supabase URL';err.style.display='block';return;}
+  if(!supa){err.textContent='請填入 Supabase Publishable Key';err.style.display='block';return;}
   localStorage.setItem(CFG,JSON.stringify({url,supa,ai,aiType}));
   document.getElementById('settings-overlay').classList.remove('show');
+  // Re-boot to connect with new settings
+  DB=null; ME=null;
   boot();
 }
 
@@ -428,8 +464,26 @@ let charts={};
 // ── BOOT ────────────────────────────────
 function boot(){
   const c=getCfg();
-  if(!c.url||!c.supa){openSettings();return;}
-  DB=createClient(c.url,c.supa);
+  const url  = c.url  || '';
+  const supa = c.supa || '';
+  const hasConfig = !!(url && supa);
+
+  // 顯示或隱藏首次設定提示
+  const banner=document.getElementById('first-time-banner');
+  const changeLink=document.getElementById('change-settings-link');
+  if(banner) banner.style.display = hasConfig ? 'none' : 'block';
+  if(changeLink) changeLink.style.display = hasConfig ? 'block' : 'none';
+
+  if(!hasConfig){
+    // 沒有設定 → 顯示登入頁（帶首次提示），等使用者點設定
+    document.getElementById('auth-screen').style.display='flex';
+    return;
+  }
+
+  // 有設定 → 建立 DB 連線並監聽登入狀態
+  DB=createClient(url,supa);
+  document.getElementById('auth-screen').style.display='flex';
+
   DB.auth.onAuthStateChange(async(_,sess)=>{
     if(sess?.user){
       ME=sess.user;
@@ -445,8 +499,7 @@ function boot(){
   });
 }
 
-const _c=getCfg();
-if(!_c.url||!_c.supa){openSettings();}else{boot();}
+boot();
 
 // ── AUTH ────────────────────────────────
 function switchTab(t){
@@ -821,6 +874,13 @@ ${oText}
 }`;
 
   const cfg=getCfg();
+  // AI key: 優先用 localStorage，沒有才彈設定視窗
+  if(!cfg.ai){
+    showSaveMsg('請先到右上角 ⚙️ 填入 AI API Key',false);
+    document.getElementById('p3-actions').style.display='block';
+    document.getElementById('ai-loading').style.display='none';
+    return;
+  }
   try{
     let text='';
     if(cfg.aiType==='claude'){
@@ -863,17 +923,32 @@ ${oText}
 function skipAI(){aiRes=null;syncChips();goPane(4);}
 
 // ── SAVE ────────────────────────────────
+function showSaveMsg(msg, ok){
+  const el=document.getElementById('save-msg');
+  if(!el)return;
+  el.style.display='block';
+  el.style.background=ok?'var(--ok-l)':'var(--err-l)';
+  el.style.color=ok?'var(--ok)':'var(--err)';
+  el.textContent=msg;
+}
+function hideSaveMsg(){
+  const el=document.getElementById('save-msg');
+  if(el)el.style.display='none';
+}
+
 async function saveDecision(mode){
+  hideSaveMsg();
   const title=document.getElementById('f-title').value.trim();
   const type=document.getElementById('f-type').value;
   const opts=getOpts();
 
-  if(!title){alert('請先填寫猶豫內容（步驟1）');goPane(1);return;}
-  if(!type){alert('請先選擇決策類型（步驟1）');goPane(1);return;}
-  if(opts.length<2){alert('請填寫至少2個選項（步驟2）');goPane(2);return;}
+  if(!title){showSaveMsg('請先填寫猶豫內容（步驟1）',false);goPane(1);return;}
+  if(!type){showSaveMsg('請先選擇決策類型（步驟1）',false);goPane(1);return;}
+  if(opts.length<2){showSaveMsg('請填寫至少2個選項（步驟2）',false);goPane(2);return;}
 
   if(mode==='decided'&&!selFinal){
-    if(!confirm('還沒選擇最終選項，確定要儲存為「已決策」嗎？'))return;
+    showSaveMsg('提示：還沒選擇最終選項，已自動存為考慮中。',false);
+    mode='draft';
   }
 
   const draftBtn=document.getElementById('save-draft-btn');
@@ -885,45 +960,66 @@ async function saveDecision(mode){
 
   const rd=new Date(); rd.setDate(rd.getDate()+7);
 
+  let amount=null;
+  const amtEl=document.getElementById('f-amount');
+  if(amtEl&&amtEl.value) amount=parseFloat(amtEl.value);
+
+  let decDelay=0;
+  const delayEl=document.getElementById('f-delay');
+  if(delayEl&&delayEl.value) decDelay=parseInt(delayEl.value)||0;
+
+  let rejectReason=null;
+  const rejectEl=document.getElementById('f-reject');
+  if(rejectEl&&rejectEl.value) rejectReason=rejectEl.value;
+
   const payload={
-    title,type,options:opts,
+    title,
+    type,
+    options:opts,
     tendency:selTend||null,
-    amount:document.getElementById('f-amount').value?parseFloat(document.getElementById('f-amount').value):null,
-    currency:document.getElementById('f-cur').value||'TWD',
-    context:document.getElementById('f-ctx').value.trim()||null,
+    amount,
+    currency:document.getElementById('f-cur')?.value||'TWD',
+    context:document.getElementById('f-ctx')?.value.trim()||null,
     ai_analysis:aiRes||null,
     ai_suggest:aiRes?.suggest||null,
     ai_confidence:aiRes?.confidence||null,
     adopted:selAdopt||null,
-    reject_reason:document.getElementById('f-reject')?.value||null,
+    reject_reason:rejectReason,
     final_choice:selFinal||null,
-    decision_delay:parseInt(document.getElementById('f-delay')?.value)||0,
+    decision_delay:decDelay,
     review_due:mode==='decided'?rd.toISOString().split('T')[0]:null
   };
 
   try{
-    let error;
+    let dbError=null;
     if(editId){
-      const res=await DB.from('decisions').update(payload).eq('id',editId).eq('user_id',ME.id);
-      error=res.error;
+      const res=await DB.from('decisions')
+        .update(payload)
+        .eq('id',editId)
+        .eq('user_id',ME.id);
+      dbError=res.error;
     } else {
       payload.user_id=ME.id;
       const res=await DB.from('decisions').insert([payload]);
-      error=res.error;
+      dbError=res.error;
     }
-    if(error){
-      alert('儲存失敗：'+error.message);
-      console.error('save error:',error);
+
+    if(dbError){
+      console.error('Supabase error:',dbError);
+      showSaveMsg('儲存失敗：'+dbError.message,false);
       draftBtn.disabled=false; draftBtn.textContent=origDraft;
       finalBtn.disabled=false; finalBtn.textContent=origFinal;
       return;
     }
+
+    showSaveMsg('✓ 儲存成功！正在跳轉…',true);
     editId=null;
     await loadData();
-    showPage('list');
+    setTimeout(()=>showPage('list'), 800);
+
   } catch(e){
-    alert('發生錯誤：'+e.message);
-    console.error('save exception:',e);
+    console.error('Save exception:',e);
+    showSaveMsg('發生錯誤：'+e.message,false);
     draftBtn.disabled=false; draftBtn.textContent=origDraft;
     finalBtn.disabled=false; finalBtn.textContent=origFinal;
   }
