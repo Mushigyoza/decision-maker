@@ -480,15 +480,23 @@ function boot(){
     return;
   }
 
-  // 有設定 → 建立 DB 連線並監聽登入狀態
-  // Safari lock bug fix: use custom storage without Web Locks
-  const customStorage = {
-    getItem: (key) => { try { return localStorage.getItem(key); } catch(e) { return null; } },
-    setItem: (key, val) => { try { localStorage.setItem(key, val); } catch(e) {} },
-    removeItem: (key) => { try { localStorage.removeItem(key); } catch(e) {} }
+  // 有設定 → 建立 DB 連線
+  // Safari Web Lock bug fix: use implicit flow + custom storage
+  const safariStorage = {
+    getItem:    k => { try { return localStorage.getItem(k); }    catch(e){ return null; } },
+    setItem:    (k,v) => { try { localStorage.setItem(k,v); }    catch(e){} },
+    removeItem: k => { try { localStorage.removeItem(k); }        catch(e){} }
   };
   DB = createClient(url, supa, {
-    auth: { storage: customStorage, storageKey: 'dm-auth', flowType: 'pkce', autoRefreshToken: true, persistSession: true, detectSessionInUrl: false }
+    auth: {
+      storage: safariStorage,
+      storageKey: 'dm_auth_v1',
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+      flowType: 'implicit',
+      lock: async (name, acquireTimeout, fn) => { return fn(); }
+    }
   });
   document.getElementById('auth-screen').style.display='flex';
 
@@ -1052,38 +1060,73 @@ async function saveDecision(mode){
     review_due:mode==='decided'?rd.toISOString().split('T')[0]:null
   };
 
-  try{
-    let dbError=null;
-    if(editId){
-      const res=await DB.from('decisions')
-        .update(payload)
-        .eq('id',editId)
-        .eq('user_id',ME.id);
-      dbError=res.error;
-    } else {
-      payload.user_id=ME.id;
-      const res=await DB.from('decisions').insert([payload]);
-      dbError=res.error;
-    }
+  const resetBtns = () => {
+    draftBtn.disabled=false; draftBtn.textContent=origDraft;
+    finalBtn.disabled=false; finalBtn.textContent=origFinal;
+  };
 
-    if(dbError){
-      console.error('Supabase error:',dbError);
-      showSaveMsg('儲存失敗：'+dbError.message,false);
-      draftBtn.disabled=false; draftBtn.textContent=origDraft;
-      finalBtn.disabled=false; finalBtn.textContent=origFinal;
+  // Timeout protection: if no response in 10s, show error
+  const timeoutId = setTimeout(()=>{
+    showSaveMsg('儲存逾時，請檢查網路後再試。',false);
+    resetBtns();
+  }, 10000);
+
+  try{
+    // Get fresh token to avoid Safari stale token issue
+    const { data: { session } } = await DB.auth.getSession();
+    if(!session){
+      clearTimeout(timeoutId);
+      showSaveMsg('登入已過期，請重新登入。',false);
+      resetBtns();
       return;
     }
 
-    showSaveMsg('✓ 儲存成功！正在跳轉…',true);
-    editId=null;
+    // Use REST API directly to bypass Supabase JS lock issues on Safari
+    const c = getCfg();
+    const baseUrl = c.url + '/rest/v1/decisions';
+    const headers = {
+      'Content-Type': 'application/json',
+      'apikey': c.supa,
+      'Authorization': 'Bearer ' + session.access_token,
+      'Prefer': 'return=minimal'
+    };
+
+    let res;
+    if(editId){
+      res = await fetch(baseUrl + '?id=eq.' + editId + '&user_id=eq.' + ME.id, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(payload)
+      });
+    } else {
+      payload.user_id = ME.id;
+      res = await fetch(baseUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload)
+      });
+    }
+
+    clearTimeout(timeoutId);
+
+    if(!res.ok){
+      const errText = await res.text();
+      console.error('REST error:', res.status, errText);
+      showSaveMsg('儲存失敗（' + res.status + '）：' + errText, false);
+      resetBtns();
+      return;
+    }
+
+    showSaveMsg('✓ 儲存成功！正在跳轉…', true);
+    editId = null;
     await loadData();
     setTimeout(()=>showPage('list'), 800);
 
   } catch(e){
-    console.error('Save exception:',e);
-    showSaveMsg('發生錯誤：'+e.message,false);
-    draftBtn.disabled=false; draftBtn.textContent=origDraft;
-    finalBtn.disabled=false; finalBtn.textContent=origFinal;
+    clearTimeout(timeoutId);
+    console.error('Save exception:', e);
+    showSaveMsg('發生錯誤：' + e.message, false);
+    resetBtns();
   }
 }
 
