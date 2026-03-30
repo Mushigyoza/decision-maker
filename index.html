@@ -4,471 +4,279 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>決策助手</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:ital,wght@0,400;0,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
 
 :root {
-  --bg:           #F4F1F8;
-  --surface:      #FDFBFE;
-  --surface2:     #ECE8F3;
-  --border:       #DDD6EB;
-  --text:         #2C2440;
-  --text2:        #796E8C;
-  --text3:        #B0A8C0;
-  --accent:       #8B7AAE;
-  --accent-d:     #6E5E92;
-  --accent-l:     #EDE8F6;
-  --accent-m:     #C5B8DC;
-  --pink:         #C5919E;
-  --pink-l:       #F6EAED;
-  --pink-d:       #A97080;
-  --blue:         #7E9CB6;
-  --blue-l:       #E7EFF6;
-  --blue-d:       #5E7D9B;
-  --ok:           #8FAA8A;
-  --ok-l:         #EBF3EA;
-  --err:          #B87878;
-  --err-l:        #F6EAEA;
-  --warn:         #B89A6A;
-  --warn-l:       #F6F0E6;
-  --r:            14px;
-  --r-sm:         9px;
-  --sh:           0 2px 10px rgba(100,80,140,0.09), 0 1px 2px rgba(100,80,140,0.04);
-  --sh-md:        0 6px 24px rgba(100,80,140,0.14);
+  --bg:#F4F1F8; --surface:#FDFBFE; --surface2:#ECE8F3; --border:#DDD6EB;
+  --text:#2C2440; --text2:#796E8C; --text3:#B0A8C0;
+  --accent:#8B7AAE; --accent-d:#6E5E92; --accent-l:#EDE8F6; --accent-m:#C5B8DC;
+  --pink:#C5919E; --pink-l:#F6EAED; --pink-d:#A97080;
+  --blue:#7E9CB6; --blue-l:#E7EFF6; --blue-d:#5E7D9B;
+  --ok:#8FAA8A; --ok-l:#EBF3EA; --err:#B87878; --err-l:#F6EAEA;
+  --warn:#B89A6A; --warn-l:#F6F0E6;
+  --r:14px; --r-sm:9px;
+  --sh:0 2px 10px rgba(100,80,140,.09),0 1px 2px rgba(100,80,140,.04);
+  --sh-md:0 6px 24px rgba(100,80,140,.14);
 }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+/* OVERLAY */
+.overlay{display:none;position:fixed;inset:0;background:rgba(44,36,64,.52);z-index:300;align-items:flex-end;justify-content:center}
+.overlay.show{display:flex}
+.sheet{background:var(--surface);width:100%;max-width:500px;border-radius:20px 20px 0 0;padding:1.5rem 1.25rem 2.5rem;box-shadow:var(--sh-md);max-height:92vh;overflow-y:auto}
+.sheet-handle{width:36px;height:4px;background:var(--border);border-radius:99px;margin:0 auto 1.25rem}
+.sheet-title{font-size:17px;font-weight:700;margin-bottom:.3rem}
+.sheet-sub{font-size:13px;color:var(--text2);margin-bottom:1.5rem;line-height:1.55}
 
-html { -webkit-text-size-adjust: 100%; }
+/* AUTH */
+#auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem}
+.auth-card{background:var(--surface);border-radius:22px;padding:2.25rem 1.5rem;width:100%;max-width:380px;box-shadow:var(--sh-md);border:1px solid var(--border)}
+.auth-logo{width:54px;height:54px;background:linear-gradient(140deg,var(--accent),var(--pink));border-radius:16px;display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem;box-shadow:0 6px 16px rgba(139,122,174,.38)}
+.auth-logo svg{width:28px;height:28px;fill:white}
+.auth-title{font-size:22px;font-weight:700;margin-bottom:.25rem}
+.auth-sub{font-size:14px;color:var(--text2);margin-bottom:1.75rem}
+.tab-bar{display:flex;background:var(--surface2);border-radius:var(--r-sm);padding:3px;margin-bottom:1.5rem}
+.tab-btn{flex:1;padding:9px;text-align:center;font-size:14px;font-weight:500;border-radius:7px;cursor:pointer;color:var(--text2);transition:all .18s;border:none;background:none;font-family:inherit}
+.tab-btn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 5px rgba(100,80,140,.13)}
 
-body {
-  font-family: 'Noto Sans TC', sans-serif;
-  background: var(--bg); color: var(--text);
-  min-height: 100vh; font-size: 15px; line-height: 1.65;
-  -webkit-font-smoothing: antialiased;
-}
+/* FORM */
+.form-group{margin-bottom:1rem}
+.form-label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:5px}
+input[type=email],input[type=password],input[type=text],input[type=number],textarea,select{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:15px;color:var(--text);background:var(--surface);outline:none;transition:border-color .18s,box-shadow .18s;-webkit-appearance:none;appearance:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(139,122,174,.16)}
+textarea{resize:vertical;min-height:78px}
+.amount-row{display:flex;gap:8px}
+.amount-row select{width:88px;flex-shrink:0}
+.amount-row input{flex:1}
 
-/* ── OVERLAY ── */
-.overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(44,36,64,0.52); z-index: 300;
-  align-items: flex-end; justify-content: center;
-  padding: 0;
-}
-.overlay.show { display: flex; }
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:12px 18px;border-radius:var(--r-sm);font-family:inherit;font-size:15px;font-weight:500;cursor:pointer;border:none;transition:all .18s;text-decoration:none;-webkit-appearance:none}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--pink));color:white;width:100%;box-shadow:0 3px 10px rgba(139,122,174,.38)}
+.btn-primary:active{opacity:.88;transform:scale(.98)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-draft{background:var(--accent-l);color:var(--accent);width:100%;border:1.5px solid var(--accent-m)}
+.btn-draft:active{opacity:.85}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1.5px solid var(--border)}
+.btn-secondary:active{background:var(--border)}
+.btn-danger{background:var(--err-l);color:var(--err);border:1px solid rgba(184,120,120,.28)}
+.btn-ghost{background:none;color:var(--text2);padding:8px 10px}
+.btn-ghost:active{background:var(--surface2)}
+.btn-icon{width:36px;height:36px;padding:0;border-radius:var(--r-sm);background:var(--surface2);border:1.5px solid var(--border);color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .18s;font-size:16px;font-family:inherit}
+.err-msg{background:var(--err-l);color:var(--err);border-radius:var(--r-sm);padding:10px 14px;font-size:13px;margin-top:.75rem;display:none}
+.ok-msg{background:var(--ok-l);color:var(--ok);border-radius:var(--r-sm);padding:10px 14px;font-size:13px;margin-top:.75rem;display:none}
 
-.sheet {
-  background: var(--surface); width: 100%; max-width: 500px;
-  border-radius: 20px 20px 0 0; padding: 1.5rem 1.25rem 2rem;
-  box-shadow: var(--sh-md); max-height: 92vh; overflow-y: auto;
-}
+/* APP SHELL */
+#app-screen{display:none;min-height:100vh}
+.app-header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1rem;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header-brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:16px}
+.brand-icon{width:30px;height:30px;background:linear-gradient(140deg,var(--accent),var(--pink));border-radius:8px;display:flex;align-items:center;justify-content:center}
+.brand-icon svg{width:16px;height:16px;fill:white}
+.header-actions{display:flex;align-items:center;gap:6px}
+.user-pill{font-size:12px;color:var(--text2);background:var(--surface2);padding:4px 10px;border-radius:99px;display:none;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(min-width:480px){.user-pill{display:block}}
 
-.sheet-handle {
-  width: 36px; height: 4px; background: var(--border);
-  border-radius: 99px; margin: 0 auto 1.25rem;
-}
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:max(env(safe-area-inset-bottom),4px)}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 4px;cursor:pointer;color:var(--text3);font-size:10px;font-weight:500;transition:color .18s;border:none;background:none;font-family:inherit}
+.nav-btn svg{width:22px;height:22px}
+.nav-btn.active{color:var(--accent)}
+.fab{width:50px;height:50px;margin-bottom:2px;background:linear-gradient(140deg,var(--accent),var(--pink));border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(139,122,174,.45)}
+.fab svg{width:26px;height:26px;fill:white}
 
-.sheet-title { font-size: 17px; font-weight: 700; margin-bottom: .3rem; }
-.sheet-sub { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; line-height: 1.55; }
+/* PAGES */
+.page{display:none;padding:1rem 1rem 110px;max-width:560px;margin:0 auto}
+.page.active{display:block}
+.page-title{font-size:20px;font-weight:700;margin-bottom:1rem}
 
-/* ── AUTH ── */
-#auth-screen {
-  min-height: 100vh; display: flex; align-items: center;
-  justify-content: center; padding: 1.5rem;
-}
+/* LIST CONTROLS */
+.list-controls{display:flex;gap:8px;margin-bottom:1rem;align-items:center;flex-wrap:wrap}
+.filter-row{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none;flex:1}
+.filter-row::-webkit-scrollbar{display:none}
+.f-chip{padding:6px 12px;border-radius:99px;border:1.5px solid var(--border);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;background:var(--surface);color:var(--text2);transition:all .16s;font-family:inherit}
+.f-chip.on{background:var(--accent);color:white;border-color:var(--accent)}
+.sort-select{padding:6px 10px;border-radius:99px;border:1.5px solid var(--border);font-size:13px;background:var(--surface);color:var(--text2);font-family:inherit;cursor:pointer;white-space:nowrap;-webkit-appearance:none;appearance:none;padding-right:24px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23796E8C' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
 
-.auth-card {
-  background: var(--surface); border-radius: 22px;
-  padding: 2.25rem 1.5rem; width: 100%; max-width: 380px;
-  box-shadow: var(--sh-md); border: 1px solid var(--border);
-}
+/* CARDS */
+.card{background:var(--surface);border-radius:var(--r);border:1px solid var(--border);padding:1.1rem;margin-bottom:.875rem;box-shadow:var(--sh)}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.6rem}
+.card-title{font-size:15px;font-weight:600;flex:1;padding-right:8px;line-height:1.4}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:99px;font-size:12px;font-weight:500;white-space:nowrap}
+.badge-s{background:var(--pink-l);color:var(--pink-d)}
+.badge-i{background:var(--blue-l);color:var(--blue-d)}
+.badge-l{background:var(--accent-l);color:var(--accent-d)}
+.card-meta{display:flex;gap:10px;font-size:12px;color:var(--text2);flex-wrap:wrap;align-items:center}
+.card-actions{display:flex;gap:8px;margin-top:.875rem;padding-top:.875rem;border-top:1px solid var(--border)}
 
-.auth-logo {
-  width: 54px; height: 54px;
-  background: linear-gradient(140deg, var(--accent), var(--pink));
-  border-radius: 16px; display: flex; align-items: center; justify-content: center;
-  margin-bottom: 1.25rem; box-shadow: 0 6px 16px rgba(139,122,174,0.38);
-}
-.auth-logo svg { width: 28px; height: 28px; fill: white; }
-.auth-title { font-size: 22px; font-weight: 700; margin-bottom: .25rem; }
-.auth-sub { font-size: 14px; color: var(--text2); margin-bottom: 1.75rem; }
+/* STATUS BADGES */
+.status-dot{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;padding:3px 9px;border-radius:99px}
+.status-draft{background:#F5EFE6;color:#8B6A30}
+.status-decided{background:var(--blue-l);color:var(--blue-d)}
+.status-reviewed{background:var(--ok-l);color:var(--ok)}
 
-.tab-bar {
-  display: flex; background: var(--surface2); border-radius: var(--r-sm);
-  padding: 3px; margin-bottom: 1.5rem;
-}
-.tab-btn {
-  flex: 1; padding: 9px; text-align: center; font-size: 14px; font-weight: 500;
-  border-radius: 7px; cursor: pointer; color: var(--text2); transition: all .18s;
-  border: none; background: none; font-family: inherit;
-}
-.tab-btn.active {
-  background: var(--surface); color: var(--text);
-  box-shadow: 0 1px 5px rgba(100,80,140,0.13);
-}
+/* STEP FORM */
+.steps{display:flex;gap:5px;margin-bottom:1.25rem}
+.step-bar{height:3px;flex:1;border-radius:99px;background:var(--border);transition:background .25s}
+.step-bar.active{background:var(--accent)}
+.step-bar.done{background:var(--accent-m)}
+.step-lbl{font-size:11px;color:var(--text2);margin-bottom:1.1rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em}
+.step-pane{display:none}
+.step-pane.active{display:block}
+.option-row{display:flex;gap:8px;margin-bottom:7px;align-items:center}
+.opt-lbl{width:30px;height:30px;background:var(--accent-l);border:1.5px solid var(--accent-m);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--accent);flex-shrink:0;font-family:'DM Mono',monospace}
+.chip-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px}
+.chip{padding:7px 14px;border-radius:99px;border:1.5px solid var(--border);font-size:14px;cursor:pointer;background:var(--surface);color:var(--text);transition:all .16s;font-family:inherit}
+.chip.on{background:var(--accent);color:white;border-color:var(--accent)}
 
-/* ── FORM ── */
-.form-group { margin-bottom: 1rem; }
-.form-label { display: block; font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 5px; }
+/* AI */
+.ai-wrap{background:var(--accent-l);border-radius:var(--r);border:1.5px solid var(--accent-m);padding:1.1rem;margin-bottom:1rem}
+.ai-head{display:flex;align-items:center;gap:7px;font-weight:600;font-size:14px;color:var(--accent);margin-bottom:.875rem}
+.ai-box{background:var(--surface);border-radius:var(--r-sm);padding:.875rem;margin-bottom:.625rem;border:1px solid rgba(139,122,174,.15)}
+.ai-box:last-child{margin-bottom:0}
+.ai-box-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem}
+.ai-box-text{font-size:14px;color:var(--text);line-height:1.65;white-space:pre-wrap}
+.ai-verdict{background:linear-gradient(135deg,var(--accent),var(--pink));color:white;border-radius:var(--r-sm);padding:1rem;text-align:center;box-shadow:0 4px 14px rgba(139,122,174,.32)}
+.verdict-lbl{font-size:11px;opacity:.82;margin-bottom:3px}
+.verdict-val{font-size:21px;font-weight:700;margin-bottom:3px;line-height:1.3}
+.verdict-conf{font-size:13px;opacity:.84}
+.verdict-reason{font-size:13px;opacity:.82;margin-top:8px;line-height:1.55}
+.dots{display:flex;gap:6px;align-items:center;justify-content:center;padding:2rem;color:var(--text2);font-size:14px}
+.dot{width:8px;height:8px;border-radius:50%;animation:bop 1.2s infinite}
+.dot:nth-child(1){background:var(--accent)}
+.dot:nth-child(2){background:var(--pink);animation-delay:.2s}
+.dot:nth-child(3){background:var(--blue);animation-delay:.4s}
+@keyframes bop{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-9px)}}
 
-input[type=email], input[type=password], input[type=text],
-input[type=number], textarea, select {
-  width: 100%; padding: 11px 14px; border: 1.5px solid var(--border);
-  border-radius: var(--r-sm); font-family: inherit; font-size: 15px;
-  color: var(--text); background: var(--surface); outline: none;
-  transition: border-color .18s, box-shadow .18s; -webkit-appearance: none; appearance: none;
-}
-input:focus, textarea:focus, select:focus {
-  border-color: var(--accent); box-shadow: 0 0 0 3px rgba(139,122,174,0.16);
-}
-textarea { resize: vertical; min-height: 78px; }
+/* STATS */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:1.1rem}
+.stat-card{background:var(--surface);border-radius:var(--r);border:1px solid var(--border);padding:.875rem;box-shadow:var(--sh)}
+.stat-lbl{font-size:12px;color:var(--text2);font-weight:500;margin-bottom:5px}
+.stat-val{font-size:26px;font-weight:700;color:var(--text);line-height:1;font-family:'DM Mono',monospace}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:3px}
+.chart-card{background:var(--surface);border-radius:var(--r);border:1px solid var(--border);padding:1.1rem;margin-bottom:.875rem;box-shadow:var(--sh)}
+.chart-title{font-size:14px;font-weight:600;margin-bottom:.875rem}
+.chart-wrap{position:relative;height:180px}
 
-.amount-row { display: flex; gap: 8px; }
-.amount-row select { width: 88px; flex-shrink: 0; }
-.amount-row input { flex: 1; }
-
-/* ── BUTTONS ── */
-.btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  gap: 7px; padding: 12px 18px; border-radius: var(--r-sm);
-  font-family: inherit; font-size: 15px; font-weight: 500;
-  cursor: pointer; border: none; transition: all .18s; text-decoration: none;
-  -webkit-appearance: none;
-}
-.btn-primary {
-  background: linear-gradient(135deg, var(--accent), var(--pink));
-  color: white; width: 100%;
-  box-shadow: 0 3px 10px rgba(139,122,174,0.38);
-}
-.btn-primary:active { opacity: .88; transform: scale(.98); }
-.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-.btn-secondary { background: var(--surface2); color: var(--text); border: 1.5px solid var(--border); }
-.btn-secondary:active { background: var(--border); }
-.btn-danger { background: var(--err-l); color: var(--err); border: 1px solid rgba(184,120,120,.28); }
-.btn-ghost { background: none; color: var(--text2); padding: 8px 10px; }
-.btn-ghost:active { background: var(--surface2); }
-.btn-icon {
-  width: 36px; height: 36px; padding: 0; border-radius: var(--r-sm);
-  background: var(--surface2); border: 1.5px solid var(--border);
-  color: var(--text2); cursor: pointer; display: inline-flex;
-  align-items: center; justify-content: center; transition: all .18s;
-  font-size: 16px; font-family: inherit;
-}
-.btn-icon:active { background: var(--border); }
-
-.error-msg {
-  background: var(--err-l); color: var(--err); border-radius: var(--r-sm);
-  padding: 10px 14px; font-size: 13px; margin-top: .75rem; display: none;
-}
-.success-msg {
-  background: var(--ok-l); color: var(--ok); border-radius: var(--r-sm);
-  padding: 10px 14px; font-size: 13px; margin-top: .75rem; display: none;
-}
-
-/* ── APP SHELL ── */
-#app-screen { display: none; min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
-
-.app-header {
-  background: var(--surface); border-bottom: 1px solid var(--border);
-  padding: 0 1rem; height: 52px; display: flex; align-items: center;
-  justify-content: space-between; position: sticky; top: 0; z-index: 100;
-}
-.header-brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 16px; }
-.brand-icon {
-  width: 30px; height: 30px;
-  background: linear-gradient(140deg, var(--accent), var(--pink));
-  border-radius: 8px; display: flex; align-items: center; justify-content: center;
-}
-.brand-icon svg { width: 16px; height: 16px; fill: white; }
-.header-actions { display: flex; align-items: center; gap: 6px; }
-.user-pill {
-  font-size: 12px; color: var(--text2); background: var(--surface2);
-  padding: 4px 10px; border-radius: 99px; display: none;
-}
-@media (min-width: 480px) { .user-pill { display: block; } }
-
-/* ── BOTTOM NAV ── */
-.bottom-nav {
-  position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface);
-  border-top: 1px solid var(--border); display: flex; z-index: 100;
-  padding-bottom: max(env(safe-area-inset-bottom), 4px);
-}
-.nav-btn {
-  flex: 1; display: flex; flex-direction: column; align-items: center;
-  gap: 2px; padding: 8px 0 4px; cursor: pointer; color: var(--text3);
-  font-size: 10px; font-weight: 500; transition: color .18s;
-  border: none; background: none; font-family: inherit;
-}
-.nav-btn svg { width: 22px; height: 22px; }
-.nav-btn.active { color: var(--accent); }
-.nav-center { padding-top: 0; }
-.fab {
-  width: 50px; height: 50px; margin-bottom: 2px;
-  background: linear-gradient(140deg, var(--accent), var(--pink));
-  border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 14px rgba(139,122,174,0.45);
-}
-.fab svg { width: 26px; height: 26px; fill: white; }
-
-/* ── PAGES ── */
-.page { display: none; padding: 1rem 1rem 100px; max-width: 560px; margin: 0 auto; }
-.page.active { display: block; }
-.page-title { font-size: 20px; font-weight: 700; margin-bottom: 1.1rem; }
-
-/* ── CARDS ── */
-.card {
-  background: var(--surface); border-radius: var(--r); border: 1px solid var(--border);
-  padding: 1.1rem; margin-bottom: .875rem; box-shadow: var(--sh);
-}
-.card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: .6rem; }
-.card-title { font-size: 15px; font-weight: 600; flex: 1; padding-right: 8px; line-height: 1.4; }
-
-.badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 99px; font-size: 12px; font-weight: 500; white-space: nowrap; }
-.badge-s { background: var(--pink-l);   color: var(--pink-d); }
-.badge-i { background: var(--blue-l);   color: var(--blue-d); }
-.badge-l { background: var(--accent-l); color: var(--accent-d); }
-
-.card-meta { display: flex; gap: 10px; font-size: 12px; color: var(--text2); flex-wrap: wrap; align-items: center; }
-.card-actions { display: flex; gap: 8px; margin-top: .875rem; padding-top: .875rem; border-top: 1px solid var(--border); }
-
-/* ── STEP FORM ── */
-.steps { display: flex; gap: 5px; margin-bottom: 1.25rem; }
-.step-bar { height: 3px; flex: 1; border-radius: 99px; background: var(--border); transition: background .25s; }
-.step-bar.active { background: var(--accent); }
-.step-bar.done { background: var(--accent-m); }
-.step-lbl { font-size: 11px; color: var(--text2); margin-bottom: 1.1rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; }
-.step-pane { display: none; }
-.step-pane.active { display: block; }
-
-.option-row { display: flex; gap: 8px; margin-bottom: 7px; align-items: center; }
-.opt-lbl {
-  width: 30px; height: 30px; background: var(--accent-l); border: 1.5px solid var(--accent-m);
-  border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 600; color: var(--accent); flex-shrink: 0;
-  font-family: 'DM Mono', monospace;
-}
-
-.chip-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 7px; }
-.chip {
-  padding: 7px 14px; border-radius: 99px; border: 1.5px solid var(--border);
-  font-size: 14px; cursor: pointer; background: var(--surface); color: var(--text);
-  transition: all .16s; font-family: inherit;
-}
-.chip:active { opacity: .75; }
-.chip.on { background: var(--accent); color: white; border-color: var(--accent); }
-
-/* ── AI RESULT ── */
-.ai-wrap {
-  background: var(--accent-l); border-radius: var(--r); border: 1.5px solid var(--accent-m);
-  padding: 1.1rem; margin-bottom: 1rem;
-}
-.ai-head { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 14px; color: var(--accent); margin-bottom: .875rem; }
-.ai-box { background: var(--surface); border-radius: var(--r-sm); padding: .875rem; margin-bottom: .625rem; border: 1px solid rgba(139,122,174,.15); }
-.ai-box:last-child { margin-bottom: 0; }
-.ai-box-title { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .4rem; }
-.ai-box-text { font-size: 14px; color: var(--text); line-height: 1.65; white-space: pre-wrap; }
-.ai-verdict {
-  background: linear-gradient(135deg, var(--accent), var(--pink));
-  color: white; border-radius: var(--r-sm); padding: 1rem; text-align: center;
-  box-shadow: 0 4px 14px rgba(139,122,174,.32);
-}
-.verdict-lbl { font-size: 11px; opacity: .82; margin-bottom: 3px; }
-.verdict-val { font-size: 21px; font-weight: 700; margin-bottom: 3px; line-height: 1.3; }
-.verdict-conf { font-size: 13px; opacity: .84; }
-.verdict-reason { font-size: 13px; opacity: .82; margin-top: 8px; line-height: 1.55; }
-
-.dots { display: flex; gap: 6px; align-items: center; justify-content: center; padding: 2rem; color: var(--text2); font-size: 14px; }
-.dot { width: 8px; height: 8px; border-radius: 50%; animation: bop 1.2s infinite; }
-.dot:nth-child(1) { background: var(--accent); }
-.dot:nth-child(2) { background: var(--pink); animation-delay: .2s; }
-.dot:nth-child(3) { background: var(--blue); animation-delay: .4s; }
-@keyframes bop { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-9px)} }
-
-/* ── FILTER ── */
-.filter-row { display: flex; gap: 7px; margin-bottom: 1.1rem; overflow-x: auto; padding-bottom: 3px; scrollbar-width: none; }
-.filter-row::-webkit-scrollbar { display: none; }
-.f-chip {
-  padding: 6px 13px; border-radius: 99px; border: 1.5px solid var(--border);
-  font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;
-  background: var(--surface); color: var(--text2); transition: all .16s; font-family: inherit;
-}
-.f-chip.on { background: var(--accent); color: white; border-color: var(--accent); }
-
-/* ── STATS ── */
-.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 1.1rem; }
-.stat-card { background: var(--surface); border-radius: var(--r); border: 1px solid var(--border); padding: .875rem; box-shadow: var(--sh); }
-.stat-lbl { font-size: 12px; color: var(--text2); font-weight: 500; margin-bottom: 5px; }
-.stat-val { font-size: 26px; font-weight: 700; color: var(--text); line-height: 1; font-family: 'DM Mono', monospace; }
-.stat-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
-
-.chart-card { background: var(--surface); border-radius: var(--r); border: 1px solid var(--border); padding: 1.1rem; margin-bottom: .875rem; box-shadow: var(--sh); }
-.chart-title { font-size: 14px; font-weight: 600; margin-bottom: .875rem; }
-.chart-wrap { position: relative; height: 180px; }
-
-/* ── DETAIL ── */
-.d-section { background: var(--surface); border-radius: var(--r); border: 1px solid var(--border); padding: 1.1rem; margin-bottom: .875rem; box-shadow: var(--sh); }
-.d-section-title { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .65rem; padding-bottom: .5rem; border-bottom: 1px solid var(--border); }
-.d-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 5px 0; font-size: 14px; gap: 10px; }
-.d-key { color: var(--text2); flex-shrink: 0; }
-.d-val { color: var(--text); font-weight: 500; text-align: right; }
-
-.stars { display: flex; gap: 5px; margin-top: 7px; }
-.star { width: 34px; height: 34px; border-radius: var(--r-sm); border: 1.5px solid var(--border); background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 19px; cursor: pointer; transition: all .16s; }
-.star.on { background: var(--pink-l); border-color: var(--pink); }
-
-.tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-.tag {
-  padding: 5px 12px; background: var(--surface2); border-radius: 99px;
-  font-size: 13px; color: var(--text); border: 1.5px solid var(--border);
-  cursor: pointer; transition: all .16s; font-family: inherit;
-}
-.tag.on { background: var(--accent); color: white; border-color: var(--accent); }
-
-.pending-banner {
-  background: var(--warn-l); border: 1px solid rgba(184,154,106,.3);
-  border-radius: var(--r-sm); padding: 9px 12px; font-size: 13px;
-  color: #7A5C30; margin-top: 9px; display: flex; align-items: center; gap: 7px;
-}
-
-.divider { height: 1px; background: var(--border); margin: .875rem 0; }
-.btn-row { display: flex; gap: 8px; margin-top: 1.1rem; }
-.btn-row .btn { flex: 1; }
-
-.empty { text-align: center; padding: 3rem 1rem; color: var(--text2); }
-.empty-icon { font-size: 44px; margin-bottom: .875rem; opacity: .33; }
-.empty h3 { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: .4rem; }
-.empty p { font-size: 14px; }
-
-.note { font-size: 12px; color: var(--text3); margin-top: 5px; line-height: 1.5; }
+/* DETAIL */
+.d-section{background:var(--surface);border-radius:var(--r);border:1px solid var(--border);padding:1.1rem;margin-bottom:.875rem;box-shadow:var(--sh)}
+.d-section-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.65rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+.d-row{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;font-size:14px;gap:10px}
+.d-key{color:var(--text2);flex-shrink:0}
+.d-val{color:var(--text);font-weight:500;text-align:right}
+.stars{display:flex;gap:5px;margin-top:7px}
+.star{width:34px;height:34px;border-radius:var(--r-sm);border:1.5px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:19px;cursor:pointer;transition:all .16s}
+.star.on{background:var(--pink-l);border-color:var(--pink)}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.tag{padding:5px 12px;background:var(--surface2);border-radius:99px;font-size:13px;color:var(--text);border:1.5px solid var(--border);cursor:pointer;transition:all .16s;font-family:inherit}
+.tag.on{background:var(--accent);color:white;border-color:var(--accent)}
+.pending-banner{background:var(--warn-l);border:1px solid rgba(184,154,106,.3);border-radius:var(--r-sm);padding:9px 12px;font-size:13px;color:#7A5C30;margin-top:9px;display:flex;align-items:center;gap:7px}
+.divider{height:1px;background:var(--border);margin:.875rem 0}
+.btn-row{display:flex;gap:8px;margin-top:1.1rem}
+.btn-row .btn{flex:1}
+.empty{text-align:center;padding:3rem 1rem;color:var(--text2)}
+.empty-icon{font-size:44px;margin-bottom:.875rem;opacity:.33}
+.empty h3{font-size:16px;font-weight:600;color:var(--text);margin-bottom:.4rem}
+.empty p{font-size:14px}
+.note{font-size:12px;color:var(--text3);margin-top:5px;line-height:1.5}
+.draft-banner{background:var(--accent-l);border:1.5px solid var(--accent-m);border-radius:var(--r-sm);padding:10px 14px;font-size:13px;color:var(--accent-d);margin-bottom:1rem;display:flex;align-items:center;gap:8px}
 </style>
 </head>
 <body>
 
-<!-- ══════════════ SETTINGS SHEET ══════════════ -->
+<!-- SETTINGS -->
 <div class="overlay" id="settings-overlay">
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">⚙️ API 設定</div>
     <div class="sheet-sub">金鑰只儲存在你的瀏覽器裡，不會外洩。換裝置或換瀏覽器時需重新填入。</div>
-
-    <div class="form-group">
-      <label class="form-label">Supabase URL</label>
-      <input type="text" id="cfg-url" placeholder="https://xxxxxxxx.supabase.co" autocomplete="off" />
-    </div>
-    <div class="form-group">
-      <label class="form-label">Supabase Publishable Key</label>
-      <input type="password" id="cfg-supa" placeholder="eyJ..." autocomplete="off" />
-    </div>
-    <div class="form-group">
-      <label class="form-label">AI API Key</label>
-      <input type="password" id="cfg-ai" placeholder="AIzaSy...（Gemini）或 sk-ant-...（Claude）" autocomplete="off" />
-      <div class="note">Gemini 免費版填 AIzaSy 開頭；Claude API 填 sk-ant 開頭</div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">AI 服務選擇</label>
-      <select id="cfg-ai-type">
-        <option value="gemini">Google Gemini（免費）</option>
-        <option value="claude">Claude API（付費）</option>
-      </select>
-    </div>
-
+    <div class="form-group"><label class="form-label">Supabase URL</label><input type="text" id="cfg-url" placeholder="https://xxxxxxxx.supabase.co" autocomplete="off" /></div>
+    <div class="form-group"><label class="form-label">Supabase Publishable Key</label><input type="password" id="cfg-supa" placeholder="eyJ..." autocomplete="off" /></div>
+    <div class="form-group"><label class="form-label">AI API Key</label><input type="password" id="cfg-ai" placeholder="AIzaSy... 或 sk-ant-..." autocomplete="off" /><div class="note">Gemini 免費版填 AIzaSy 開頭；Claude API 填 sk-ant 開頭</div></div>
+    <div class="form-group"><label class="form-label">AI 服務</label><select id="cfg-ai-type"><option value="gemini">Google Gemini（免費）</option><option value="claude">Claude API（付費）</option></select></div>
     <button class="btn btn-primary" onclick="saveSettings()">儲存並繼續</button>
-    <div class="error-msg" id="cfg-err"></div>
+    <div class="err-msg" id="cfg-err"></div>
   </div>
 </div>
 
-<!-- ══════════════ AUTH ══════════════ -->
+<!-- AUTH -->
 <div id="auth-screen">
   <div class="auth-card">
-    <div class="auth-logo">
-      <svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V9l-6-6H9zm0 0v6h6M9 13h6M9 17h4"/></svg>
-    </div>
+    <div class="auth-logo"><svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V9l-6-6H9zm0 0v6h6M9 13h6M9 17h4"/></svg></div>
     <div class="auth-title">決策助手</div>
     <div class="auth-sub">記錄每個選擇，找到你的決策模式</div>
-
     <div class="tab-bar">
       <button class="tab-btn active" onclick="switchTab('login')">登入</button>
       <button class="tab-btn" onclick="switchTab('register')">註冊</button>
     </div>
-
     <div id="login-pane">
       <div class="form-group"><label class="form-label">電子郵件</label><input type="email" id="l-email" placeholder="your@email.com" /></div>
       <div class="form-group"><label class="form-label">密碼</label><input type="password" id="l-pw" placeholder="••••••••" /></div>
       <button class="btn btn-primary" id="l-btn" onclick="doLogin()">登入</button>
-      <div class="error-msg" id="l-err"></div>
+      <div class="err-msg" id="l-err"></div>
     </div>
-
-    <div id="register-pane" style="display:none;">
+    <div id="register-pane" style="display:none">
       <div class="form-group"><label class="form-label">電子郵件</label><input type="email" id="r-email" placeholder="your@email.com" /></div>
       <div class="form-group"><label class="form-label">密碼（至少6碼）</label><input type="password" id="r-pw" placeholder="••••••••" /></div>
       <button class="btn btn-primary" id="r-btn" onclick="doRegister()">建立帳號</button>
-      <div class="error-msg" id="r-err"></div>
-      <div class="success-msg" id="r-ok"></div>
+      <div class="err-msg" id="r-err"></div>
+      <div class="ok-msg" id="r-ok"></div>
     </div>
   </div>
 </div>
 
-<!-- ══════════════ APP ══════════════ -->
+<!-- APP -->
 <div id="app-screen">
-
   <div class="app-header">
     <div class="header-brand">
-      <div class="brand-icon">
-        <svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V9l-6-6H9zm0 0v6h6M9 13h6M9 17h4"/></svg>
-      </div>
+      <div class="brand-icon"><svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V9l-6-6H9zm0 0v6h6M9 13h6M9 17h4"/></svg></div>
       決策助手
     </div>
     <div class="header-actions">
       <span class="user-pill" id="user-pill"></span>
       <button class="btn-icon" onclick="openSettings()">⚙️</button>
-      <button class="btn-icon" onclick="doLogout()">
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-      </button>
+      <button class="btn-icon" onclick="doLogout()"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
     </div>
   </div>
 
   <!-- LIST -->
   <div class="page active" id="page-list">
     <div class="page-title">我的決策</div>
-    <div class="filter-row">
-      <button class="f-chip on" onclick="setFilter('all',this)">全部</button>
-      <button class="f-chip" onclick="setFilter('購物',this)">🛍 購物</button>
-      <button class="f-chip" onclick="setFilter('投資',this)">📈 投資</button>
-      <button class="f-chip" onclick="setFilter('生活',this)">🌱 生活</button>
-      <button class="f-chip" onclick="setFilter('pending',this)">⏰ 待回顧</button>
+    <div class="list-controls">
+      <div class="filter-row">
+        <button class="f-chip on" onclick="setFilter('all',this)">全部</button>
+        <button class="f-chip" onclick="setFilter('draft',this)">考慮中</button>
+        <button class="f-chip" onclick="setFilter('decided',this)">已決策</button>
+        <button class="f-chip" onclick="setFilter('reviewed',this)">已回顧</button>
+        <button class="f-chip" onclick="setFilter('購物',this)">🛍 購物</button>
+        <button class="f-chip" onclick="setFilter('投資',this)">📈 投資</button>
+        <button class="f-chip" onclick="setFilter('生活',this)">🌱 生活</button>
+        <button class="f-chip" onclick="setFilter('pending',this)">⏰ 待回顧</button>
+      </div>
+      <select class="sort-select" id="sort-select" onchange="renderList()">
+        <option value="date-desc">最新優先</option>
+        <option value="date-asc">最舊優先</option>
+        <option value="status">依狀態</option>
+      </select>
     </div>
     <div id="list-body"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div>載入中</div></div>
   </div>
 
   <!-- ADD -->
   <div class="page" id="page-add">
-    <div class="page-title">新增決策</div>
-    <div class="steps">
-      <div class="step-bar active" id="sb1"></div>
-      <div class="step-bar" id="sb2"></div>
-      <div class="step-bar" id="sb3"></div>
-      <div class="step-bar" id="sb4"></div>
-    </div>
+    <div class="page-title" id="add-page-title">新增決策</div>
+    <div class="steps"><div class="step-bar active" id="sb1"></div><div class="step-bar" id="sb2"></div><div class="step-bar" id="sb3"></div><div class="step-bar" id="sb4"></div></div>
 
     <!-- Pane 1 -->
     <div class="step-pane active" id="sp1">
       <div class="step-lbl">步驟 1 · 基本資訊</div>
       <div class="form-group"><label class="form-label">我在猶豫…</label><input type="text" id="f-title" placeholder="例：要不要買 AirPods Pro" /></div>
-      <div class="form-group">
-        <label class="form-label">類型</label>
-        <select id="f-type"><option value="">選擇類型</option><option value="購物">🛍 購物</option><option value="投資">📈 投資</option><option value="生活">🌱 生活</option></select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">金額（選填）</label>
-        <div class="amount-row">
-          <select id="f-cur"><option value="TWD">NT$</option><option value="USD">USD</option><option value="JPY">JPY</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="CNY">CNY</option><option value="HKD">HKD</option><option value="KRW">KRW</option></select>
-          <input type="number" id="f-amount" placeholder="金額" />
-        </div>
-      </div>
+      <div class="form-group"><label class="form-label">類型</label><select id="f-type"><option value="">選擇類型</option><option value="購物">🛍 購物</option><option value="投資">📈 投資</option><option value="生活">🌱 生活</option></select></div>
+      <div class="form-group"><label class="form-label">金額（選填）</label><div class="amount-row"><select id="f-cur"><option value="TWD">NT$</option><option value="USD">USD</option><option value="JPY">JPY</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="CNY">CNY</option><option value="HKD">HKD</option><option value="KRW">KRW</option></select><input type="number" id="f-amount" placeholder="金額" /></div></div>
       <div class="form-group"><label class="form-label">情境（一句話）</label><textarea id="f-ctx" placeholder="例：通勤降噪用，舊耳機已用2年"></textarea></div>
       <div class="btn-row"><button class="btn btn-primary" onclick="goPane(2)">下一步 →</button></div>
     </div>
@@ -482,7 +290,7 @@ textarea { resize: vertical; min-height: 78px; }
           <div class="option-row"><div class="opt-lbl">A</div><input type="text" placeholder="選項 A" oninput="syncChips()" /></div>
           <div class="option-row"><div class="opt-lbl">B</div><input type="text" placeholder="選項 B" oninput="syncChips()" /></div>
         </div>
-        <button class="btn btn-secondary" style="margin-top:9px;width:100%;font-size:14px;" onclick="addOpt()">＋ 增加選項</button>
+        <button class="btn btn-secondary" style="margin-top:9px;width:100%;font-size:14px" onclick="addOpt()">＋ 增加選項</button>
       </div>
       <div class="form-group"><label class="form-label">當下傾向</label><div class="chip-row" id="tend-chips"><button class="chip" onclick="pickTend('未定')">未定</button></div></div>
       <div class="btn-row"><button class="btn btn-secondary" onclick="goPane(1)">← 上一步</button><button class="btn btn-primary" onclick="goPane(3)">下一步 →</button></div>
@@ -491,42 +299,33 @@ textarea { resize: vertical; min-height: 78px; }
     <!-- Pane 3 -->
     <div class="step-pane" id="sp3">
       <div class="step-lbl">步驟 3 · AI 分析</div>
-      <div id="ai-loading" style="display:none;"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div>AI 分析中</div></div>
-      <div id="ai-out" style="display:none;"></div>
-      <div id="ai-adopt" style="display:none;">
+      <div id="ai-loading" style="display:none"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div>AI 分析中</div></div>
+      <div id="ai-out" style="display:none"></div>
+      <div id="ai-adopt" style="display:none">
         <div class="divider"></div>
-        <div class="form-group">
-          <label class="form-label">是否採用 AI 建議？</label>
-          <div class="tag-row">
-            <button class="tag" onclick="pickAdopt('是',this)">是</button>
-            <button class="tag" onclick="pickAdopt('否',this)">否</button>
-            <button class="tag" onclick="pickAdopt('部分',this)">部分</button>
-          </div>
-        </div>
-        <div class="form-group" id="reject-grp" style="display:none;">
-          <label class="form-label">未採用原因</label>
-          <select id="f-reject">
-            <option value="">選擇原因</option>
-            <optgroup label="理性判斷"><option>我有額外資訊</option><option>AI忽略關鍵條件</option><option>情境不適用</option></optgroup>
-            <optgroup label="主觀偏好"><option>我就是比較喜歡另一個</option><option>習慣品牌偏好</option></optgroup>
-            <optgroup label="情緒因素"><option>當下衝動</option><option>懶得多想</option><option>壓力時間限制</option></optgroup>
-            <optgroup label="不信任AI"><option>覺得分析不準</option><option>不想被AI影響</option></optgroup>
-          </select>
-        </div>
+        <div class="form-group"><label class="form-label">是否採用 AI 建議？</label><div class="tag-row"><button class="tag" onclick="pickAdopt('是',this)">是</button><button class="tag" onclick="pickAdopt('否',this)">否</button><button class="tag" onclick="pickAdopt('部分',this)">部分</button></div></div>
+        <div class="form-group" id="reject-grp" style="display:none"><label class="form-label">未採用原因</label><select id="f-reject"><option value="">選擇原因</option><optgroup label="理性判斷"><option>我有額外資訊</option><option>AI忽略關鍵條件</option><option>情境不適用</option></optgroup><optgroup label="主觀偏好"><option>我就是比較喜歡另一個</option><option>習慣品牌偏好</option></optgroup><optgroup label="情緒因素"><option>當下衝動</option><option>懶得多想</option><option>壓力時間限制</option></optgroup><optgroup label="不信任AI"><option>覺得分析不準</option><option>不想被AI影響</option></optgroup></select></div>
       </div>
-      <div class="btn-row" id="p3-nav" style="display:none;"><button class="btn btn-secondary" onclick="goPane(2)">← 上一步</button><button class="btn btn-primary" onclick="goPane(4)">下一步 →</button></div>
-      <div id="p3-actions" style="margin-top:1rem;">
-        <button class="btn btn-primary" onclick="runAI()" style="width:100%;">✦ 開始 AI 分析</button>
-        <button class="btn btn-ghost" onclick="skipAI()" style="width:100%;margin-top:7px;">跳過 AI 分析</button>
+      <div class="btn-row" id="p3-nav" style="display:none"><button class="btn btn-secondary" onclick="goPane(2)">← 上一步</button><button class="btn btn-primary" onclick="goPane(4)">下一步 →</button></div>
+      <div id="p3-actions" style="margin-top:1rem">
+        <button class="btn btn-primary" onclick="runAI()" style="width:100%">✦ 開始 AI 分析</button>
+        <button class="btn btn-ghost" onclick="skipAI()" style="width:100%;margin-top:7px">跳過 AI 分析</button>
       </div>
     </div>
 
     <!-- Pane 4 -->
     <div class="step-pane" id="sp4">
-      <div class="step-lbl">步驟 4 · 最終決策</div>
-      <div class="form-group"><label class="form-label">最後選擇</label><div class="chip-row" id="final-chips"></div></div>
-      <div class="form-group"><label class="form-label">決策延遲了幾天？</label><input type="number" id="f-delay" value="0" min="0" /></div>
-      <div class="btn-row"><button class="btn btn-secondary" onclick="goPane(3)">← 上一步</button><button class="btn btn-primary" onclick="saveDecision()">儲存決策 ✓</button></div>
+      <div class="step-lbl">步驟 4 · 最終決策（可先暫存）</div>
+      <div class="draft-banner">💡 還沒決定沒關係！可以先「暫存考慮中」，之後在清單裡再填結果。</div>
+      <div class="form-group"><label class="form-label">最後選擇（還沒決定可跳過）</label><div class="chip-row" id="final-chips"></div></div>
+      <div class="form-group" id="delay-grp" style="display:none"><label class="form-label">決策延遲了幾天？</label><input type="number" id="f-delay" value="0" min="0" /></div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="goPane(3)">← 上一步</button>
+      </div>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:10px">
+        <button class="btn btn-draft" id="save-draft-btn" onclick="saveDecision('draft')">📌 暫存考慮中</button>
+        <button class="btn btn-primary" id="save-final-btn" onclick="saveDecision('decided')">✓ 儲存完整決策</button>
+      </div>
     </div>
   </div>
 
@@ -538,17 +337,16 @@ textarea { resize: vertical; min-height: 78px; }
 
   <!-- DETAIL -->
   <div class="page" id="page-detail">
-    <button class="btn btn-ghost" onclick="showPage('list')" style="padding-left:0;margin-bottom:.875rem;">← 返回列表</button>
+    <button class="btn btn-ghost" onclick="showPage('list')" style="padding-left:0;margin-bottom:.875rem">← 返回列表</button>
     <div id="detail-body"></div>
   </div>
 
-  <!-- Bottom Nav -->
   <div class="bottom-nav">
     <button class="nav-btn active" id="nav-list" onclick="showPage('list')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       清單
     </button>
-    <button class="nav-btn nav-center" onclick="showPage('add')">
+    <button class="nav-btn" onclick="showPage('add')">
       <div class="fab"><svg viewBox="0 0 24 24"><path d="M19 13H13v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></div>
       新增
     </button>
@@ -560,48 +358,45 @@ textarea { resize: vertical; min-height: 78px; }
 </div>
 
 <script>
-// ══════════════════════════════════════
-//  CONFIG
-// ══════════════════════════════════════
-const CFG = 'dm_cfg_v3';
-function getCfg() { try { return JSON.parse(localStorage.getItem(CFG))||{}; } catch(e) { return {}; } }
+// ── CONFIG ──────────────────────────────
+const CFG='dm_cfg_v4';
+function getCfg(){try{return JSON.parse(localStorage.getItem(CFG))||{};}catch(e){return {};}}
 
-function openSettings() {
+function openSettings(){
   const c=getCfg();
-  document.getElementById('cfg-url').value    = c.url    || '';
-  document.getElementById('cfg-supa').value   = c.supa   || '';
-  document.getElementById('cfg-ai').value     = c.ai     || '';
-  document.getElementById('cfg-ai-type').value= c.aiType || 'gemini';
+  document.getElementById('cfg-url').value=c.url||'';
+  document.getElementById('cfg-supa').value=c.supa||'';
+  document.getElementById('cfg-ai').value=c.ai||'';
+  document.getElementById('cfg-ai-type').value=c.aiType||'gemini';
   document.getElementById('settings-overlay').classList.add('show');
 }
 
-function saveSettings() {
-  const url  = document.getElementById('cfg-url').value.trim();
-  const supa = document.getElementById('cfg-supa').value.trim();
-  const ai   = document.getElementById('cfg-ai').value.trim();
-  const aiType = document.getElementById('cfg-ai-type').value;
-  const err  = document.getElementById('cfg-err');
+function saveSettings(){
+  const url=document.getElementById('cfg-url').value.trim();
+  const supa=document.getElementById('cfg-supa').value.trim();
+  const ai=document.getElementById('cfg-ai').value.trim();
+  const aiType=document.getElementById('cfg-ai-type').value;
+  const err=document.getElementById('cfg-err');
   err.style.display='none';
-  if (!url||!supa) { err.textContent='請填入 Supabase URL 和 Publishable Key'; err.style.display='block'; return; }
-  localStorage.setItem(CFG, JSON.stringify({url,supa,ai,aiType}));
+  if(!url||!supa){err.textContent='請填入 Supabase URL 和 Publishable Key';err.style.display='block';return;}
+  localStorage.setItem(CFG,JSON.stringify({url,supa,ai,aiType}));
   document.getElementById('settings-overlay').classList.remove('show');
   boot();
 }
 
-// ══════════════════════════════════════
-//  BOOT
-// ══════════════════════════════════════
-const {createClient} = supabase;
-let DB=null, ME=null, DATA=[], curFilter='all', aiRes=null;
-let selTend='', selAdopt='', selFinal='';
+// ── GLOBALS ─────────────────────────────
+const {createClient}=supabase;
+let DB=null,ME=null,DATA=[],curFilter='all',aiRes=null;
+let selTend='',selAdopt='',selFinal='',editId=null;
 let charts={};
 
-function boot() {
+// ── BOOT ────────────────────────────────
+function boot(){
   const c=getCfg();
-  if (!c.url||!c.supa) { openSettings(); return; }
-  DB = createClient(c.url, c.supa);
-  DB.auth.onAuthStateChange(async (_,sess)=>{
-    if (sess?.user) {
+  if(!c.url||!c.supa){openSettings();return;}
+  DB=createClient(c.url,c.supa);
+  DB.auth.onAuthStateChange(async(_,sess)=>{
+    if(sess?.user){
       ME=sess.user;
       document.getElementById('auth-screen').style.display='none';
       document.getElementById('app-screen').style.display='block';
@@ -616,115 +411,180 @@ function boot() {
 }
 
 const _c=getCfg();
-if (!_c.url||!_c.supa) { openSettings(); } else { boot(); }
+if(!_c.url||!_c.supa){openSettings();}else{boot();}
 
-// ══════════════════════════════════════
-//  AUTH
-// ══════════════════════════════════════
-function switchTab(t) {
+// ── AUTH ────────────────────────────────
+function switchTab(t){
   document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',(i===0&&t==='login')||(i===1&&t==='register')));
-  document.getElementById('login-pane').style.display    = t==='login'    ? 'block' : 'none';
-  document.getElementById('register-pane').style.display = t==='register' ? 'block' : 'none';
+  document.getElementById('login-pane').style.display=t==='login'?'block':'none';
+  document.getElementById('register-pane').style.display=t==='register'?'block':'none';
 }
 
-async function doLogin() {
-  const email=document.getElementById('l-email').value.trim(), pw=document.getElementById('l-pw').value;
-  const btn=document.getElementById('l-btn'), err=document.getElementById('l-err');
-  err.style.display='none'; btn.disabled=true; btn.textContent='登入中…';
+async function doLogin(){
+  const email=document.getElementById('l-email').value.trim();
+  const pw=document.getElementById('l-pw').value;
+  const btn=document.getElementById('l-btn'),err=document.getElementById('l-err');
+  err.style.display='none';btn.disabled=true;btn.textContent='登入中…';
   const {error}=await DB.auth.signInWithPassword({email,password:pw});
-  if (error) { err.textContent='登入失敗：'+error.message; err.style.display='block'; }
-  btn.disabled=false; btn.textContent='登入';
+  if(error){err.textContent='登入失敗：'+error.message;err.style.display='block';}
+  btn.disabled=false;btn.textContent='登入';
 }
 
-async function doRegister() {
-  const email=document.getElementById('r-email').value.trim(), pw=document.getElementById('r-pw').value;
-  const btn=document.getElementById('r-btn'), err=document.getElementById('r-err'), ok=document.getElementById('r-ok');
-  err.style.display='none'; ok.style.display='none'; btn.disabled=true; btn.textContent='建立中…';
+async function doRegister(){
+  const email=document.getElementById('r-email').value.trim();
+  const pw=document.getElementById('r-pw').value;
+  const btn=document.getElementById('r-btn'),err=document.getElementById('r-err'),ok=document.getElementById('r-ok');
+  err.style.display='none';ok.style.display='none';btn.disabled=true;btn.textContent='建立中…';
   const {error}=await DB.auth.signUp({email,password:pw});
-  if (error) { err.textContent='失敗：'+error.message; err.style.display='block'; }
-  else { ok.textContent='帳號已建立！請直接登入。'; ok.style.display='block'; switchTab('login'); }
-  btn.disabled=false; btn.textContent='建立帳號';
+  if(error){err.textContent='失敗：'+error.message;err.style.display='block';}
+  else{ok.textContent='帳號已建立！請直接登入。';ok.style.display='block';switchTab('login');}
+  btn.disabled=false;btn.textContent='建立帳號';
 }
 
-async function doLogout() { await DB.auth.signOut(); }
+async function doLogout(){await DB.auth.signOut();}
 
-// ══════════════════════════════════════
-//  NAVIGATION
-// ══════════════════════════════════════
-function showPage(p) {
+// ── NAVIGATION ──────────────────────────
+function showPage(p){
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
-  if (p==='list')  { document.getElementById('nav-list').classList.add('active');  loadData(); }
-  if (p==='add')   { resetForm(); }
-  if (p==='stats') { document.getElementById('nav-stats').classList.add('active'); buildStats(); }
+  if(p==='list'){document.getElementById('nav-list').classList.add('active');loadData();}
+  if(p==='add'){resetForm();}
+  if(p==='stats'){document.getElementById('nav-stats').classList.add('active');buildStats();}
   window.scrollTo({top:0});
 }
 
-// ══════════════════════════════════════
-//  DATA
-// ══════════════════════════════════════
-async function loadData() {
-  if (!DB||!ME) return;
-  const {data}=await DB.from('decisions').select('*').eq('user_id',ME.id).order('created_at',{ascending:false});
-  DATA=data||[]; renderList();
+// ── DATA ────────────────────────────────
+async function loadData(){
+  if(!DB||!ME)return;
+  const {data,error}=await DB.from('decisions').select('*').eq('user_id',ME.id).order('created_at',{ascending:false});
+  if(error){console.error('loadData error:',error);return;}
+  DATA=data||[];
+  renderList();
+}
+
+function getStatus(d){
+  if(d.satisfaction)return 'reviewed';
+  if(d.final_choice)return 'decided';
+  return 'draft';
 }
 
 const SYM={TWD:'NT$',USD:'US$',JPY:'¥',EUR:'€',GBP:'£',CNY:'¥',HKD:'HK$',KRW:'₩'};
-function fmtAmt(d) {
-  if (!d.amount) return '';
+function fmtAmt(d){
+  if(!d.amount)return '';
   return (SYM[d.currency]||d.currency+' ')+Number(d.amount).toLocaleString();
 }
 
-function renderList() {
-  const el=document.getElementById('list-body'), today=new Date();
-  let rows=DATA;
-  if (curFilter==='pending') rows=rows.filter(d=>d.review_due&&!d.satisfaction&&new Date(d.review_due)<=today);
-  else if (curFilter!=='all') rows=rows.filter(d=>d.type===curFilter);
+function renderList(){
+  const el=document.getElementById('list-body');
+  const today=new Date();
+  const sort=document.getElementById('sort-select')?.value||'date-desc';
+  let rows=[...DATA];
 
-  if (!rows.length) {
-    el.innerHTML=`<div class="empty"><div class="empty-icon">📋</div><h3>還沒有決策紀錄</h3><p>點下方 ＋ 開始記錄你的第一個決策</p></div>`;
+  // Filter
+  if(curFilter==='pending') rows=rows.filter(d=>d.review_due&&!d.satisfaction&&new Date(d.review_due)<=today);
+  else if(curFilter==='draft') rows=rows.filter(d=>getStatus(d)==='draft');
+  else if(curFilter==='decided') rows=rows.filter(d=>getStatus(d)==='decided');
+  else if(curFilter==='reviewed') rows=rows.filter(d=>getStatus(d)==='reviewed');
+  else if(curFilter!=='all') rows=rows.filter(d=>d.type===curFilter);
+
+  // Sort
+  if(sort==='date-asc') rows.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  else if(sort==='date-desc') rows.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  else if(sort==='status'){
+    const order={draft:0,decided:1,reviewed:2};
+    rows.sort((a,b)=>order[getStatus(a)]-order[getStatus(b)]);
+  }
+
+  if(!rows.length){
+    el.innerHTML=`<div class="empty"><div class="empty-icon">📋</div><h3>沒有符合的決策</h3><p>點下方 ＋ 開始記錄你的第一個決策</p></div>`;
     return;
   }
+
   el.innerHTML=rows.map(d=>{
     const bc=d.type==='購物'?'badge-s':d.type==='投資'?'badge-i':'badge-l';
     const date=new Date(d.created_at).toLocaleDateString('zh-TW',{month:'short',day:'numeric'});
     const pend=d.review_due&&!d.satisfaction&&new Date(d.review_due)<=today;
+    const status=getStatus(d);
+    const statusHtml=status==='draft'?'<span class="status-dot status-draft">⏳ 考慮中</span>':status==='decided'?'<span class="status-dot status-decided">✓ 已決策</span>':'<span class="status-dot status-reviewed">★ 已回顧</span>';
     return `<div class="card">
       <div class="card-top"><div class="card-title">${esc(d.title)}</div><span class="badge ${bc}">${d.type}</span></div>
       <div class="card-meta">
         <span>${date}</span>
+        ${statusHtml}
         ${fmtAmt(d)?`<span>${fmtAmt(d)}</span>`:''}
         ${d.ai_suggest?`<span>AI→${d.ai_suggest}</span>`:''}
-        ${d.final_choice?`<span>選了${d.final_choice}</span>`:'<span style="color:var(--text3)">未填結果</span>'}
         ${d.satisfaction?`<span style="color:var(--pink)">${'★'.repeat(d.satisfaction)}</span>`:''}
       </div>
       ${pend?`<div class="pending-banner">⏰ 後驗回顧時間到了！</div>`:''}
       <div class="card-actions">
-        <button class="btn btn-secondary" style="flex:1;font-size:13px;" onclick="openDetail('${d.id}')">查看詳情</button>
-        ${pend?`<button class="btn btn-primary" style="flex:1;font-size:13px;" onclick="openDetail('${d.id}')">填寫回顧</button>`:''}
+        <button class="btn btn-secondary" style="flex:1;font-size:13px" onclick="openDetail('${d.id}')">查看詳情</button>
+        ${status==='draft'?`<button class="btn btn-draft" style="flex:1;font-size:13px" onclick="editDecision('${d.id}')">填寫結果</button>`:''}
+        ${pend?`<button class="btn btn-primary" style="flex:1;font-size:13px" onclick="openDetail('${d.id}')">填寫回顧</button>`:''}
       </div>
     </div>`;
   }).join('');
 }
 
-function setFilter(f,el) { curFilter=f; document.querySelectorAll('.f-chip').forEach(c=>c.classList.remove('on')); el.classList.add('on'); renderList(); }
+function setFilter(f,el){
+  curFilter=f;
+  document.querySelectorAll('.f-chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  renderList();
+}
 
-// ══════════════════════════════════════
-//  DETAIL
-// ══════════════════════════════════════
-function openDetail(id) { const d=DATA.find(x=>x.id===id); if(!d) return; showPage('detail'); renderDetail(d); }
+// ── EDIT (fill result for draft) ─────────
+function editDecision(id){
+  const d=DATA.find(x=>x.id===id);
+  if(!d)return;
+  editId=id;
+  // Pre-fill form with existing data
+  resetForm(true);
+  document.getElementById('f-title').value=d.title||'';
+  document.getElementById('f-type').value=d.type||'';
+  document.getElementById('f-amount').value=d.amount||'';
+  document.getElementById('f-cur').value=d.currency||'TWD';
+  document.getElementById('f-ctx').value=d.context||'';
+  // Restore options
+  const opts=Array.isArray(d.options)?d.options:[];
+  const wrap=document.getElementById('opts-wrap');
+  wrap.innerHTML='';
+  opts.forEach((o,i)=>{
+    const row=document.createElement('div');row.className='option-row';
+    row.innerHTML=`<div class="opt-lbl">${ABC[i]}</div><input type="text" value="${esc(o)}" oninput="syncChips()" />`;
+    wrap.appendChild(row);
+  });
+  if(opts.length<2){
+    wrap.innerHTML=`<div class="option-row"><div class="opt-lbl">A</div><input type="text" placeholder="選項 A" oninput="syncChips()" /></div><div class="option-row"><div class="opt-lbl">B</div><input type="text" placeholder="選項 B" oninput="syncChips()" /></div>`;
+  }
+  selTend=d.tendency||'';
+  syncChips();
+  if(selTend) pickTend(selTend);
+  document.getElementById('add-page-title').textContent='填寫決策結果';
+  showPage('add');
+  goPane(4);
+}
 
-function renderDetail(d) {
-  const opts=Array.isArray(d.options)?d.options:[], ai=d.ai_analysis||{};
+// ── DETAIL ──────────────────────────────
+function openDetail(id){
+  const d=DATA.find(x=>x.id===id);
+  if(!d)return;
+  showPage('detail');
+  renderDetail(d);
+}
+
+function renderDetail(d){
+  const opts=Array.isArray(d.options)?d.options:[],ai=d.ai_analysis||{};
   const date=new Date(d.created_at).toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric'});
   const pend=d.review_due&&!d.satisfaction&&new Date(d.review_due)<=new Date();
+  const status=getStatus(d);
 
   let h=`<div class="d-section">
     <div class="d-section-title">基本資訊</div>
-    <div style="font-size:16px;font-weight:700;margin-bottom:.625rem;line-height:1.4;">${esc(d.title)}</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:.625rem;line-height:1.4">${esc(d.title)}</div>
+    <div class="d-row"><span class="d-key">狀態</span><span class="d-val">${status==='draft'?'⏳ 考慮中':status==='decided'?'✓ 已決策':'★ 已回顧'}</span></div>
     <div class="d-row"><span class="d-key">類型</span><span class="d-val">${d.type}</span></div>
-    <div class="d-row"><span class="d-key">日期</span><span class="d-val">${date}</span></div>
+    <div class="d-row"><span class="d-key">建立日期</span><span class="d-val">${date}</span></div>
     ${fmtAmt(d)?`<div class="d-row"><span class="d-key">金額</span><span class="d-val">${fmtAmt(d)}</span></div>`:''}
     ${d.context?`<div class="d-row"><span class="d-key">情境</span><span class="d-val" style="text-align:right">${esc(d.context)}</span></div>`:''}
   </div>
@@ -734,17 +594,19 @@ function renderDetail(d) {
     <div class="d-row"><span class="d-key">當下傾向</span><span class="d-val">${d.tendency||'未定'}</span></div>
   </div>`;
 
-  if (ai.motivations) h+=`<div class="d-section">
-    <div class="d-section-title">AI 分析</div>
-    <div style="margin-bottom:.625rem;"><div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em;">動機拆解</div><div style="font-size:14px;line-height:1.65;white-space:pre-wrap;">${esc(ai.motivations)}</div></div>
-    <div style="margin-bottom:.75rem;"><div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em;">後悔風險</div><div style="font-size:14px;line-height:1.65;white-space:pre-wrap;">${esc(ai.regret_risk)}</div></div>
-    ${d.ai_suggest?`<div style="background:linear-gradient(135deg,var(--accent-l),var(--pink-l));border-radius:10px;padding:12px;text-align:center;border:1px solid var(--accent-m);">
-      <div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:3px;text-transform:uppercase;">AI 建議</div>
-      <div style="font-size:19px;font-weight:700;color:var(--accent);">選 ${d.ai_suggest}</div>
-      ${d.ai_confidence?`<div style="font-size:12px;color:var(--text2);margin-top:2px;">信心：${d.ai_confidence}</div>`:''}
-      ${ai.reason?`<div style="font-size:13px;color:var(--text2);margin-top:7px;line-height:1.55;">${esc(ai.reason)}</div>`:''}
-    </div>`:''}
-  </div>`;
+  if(ai.motivations){
+    h+=`<div class="d-section">
+      <div class="d-section-title">AI 分析</div>
+      <div style="margin-bottom:.625rem"><div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">動機拆解</div><div style="font-size:14px;line-height:1.65;white-space:pre-wrap">${esc(ai.motivations)}</div></div>
+      <div style="margin-bottom:.75rem"><div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">後悔風險</div><div style="font-size:14px;line-height:1.65;white-space:pre-wrap">${esc(ai.regret_risk)}</div></div>
+      ${d.ai_suggest?`<div style="background:linear-gradient(135deg,var(--accent-l),var(--pink-l));border-radius:10px;padding:12px;text-align:center;border:1px solid var(--accent-m)">
+        <div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:3px;text-transform:uppercase">AI 建議</div>
+        <div style="font-size:19px;font-weight:700;color:var(--accent)">選 ${d.ai_suggest}</div>
+        ${d.ai_confidence?`<div style="font-size:12px;color:var(--text2);margin-top:2px">信心：${d.ai_confidence}</div>`:''}
+        ${ai.reason?`<div style="font-size:13px;color:var(--text2);margin-top:7px;line-height:1.55">${esc(ai.reason)}</div>`:''}
+      </div>`:''}
+    </div>`;
+  }
 
   h+=`<div class="d-section">
     <div class="d-section-title">決策結果</div>
@@ -754,7 +616,11 @@ function renderDetail(d) {
     ${d.decision_delay?`<div class="d-row"><span class="d-key">延遲</span><span class="d-val">${d.decision_delay} 天</span></div>`:''}
   </div>`;
 
-  if (d.satisfaction) {
+  if(status==='draft'){
+    h+=`<button class="btn btn-draft" style="width:100%;margin-bottom:10px" onclick="editDecision('${d.id}')">✏️ 填寫最終結果</button>`;
+  }
+
+  if(d.satisfaction){
     h+=`<div class="d-section">
       <div class="d-section-title">後驗回顧</div>
       <div class="d-row"><span class="d-key">滿意度</span><span class="d-val" style="color:var(--pink)">${'★'.repeat(d.satisfaction)}${'☆'.repeat(5-d.satisfaction)}</span></div>
@@ -762,11 +628,11 @@ function renderDetail(d) {
       ${d.revisit?`<div class="d-row"><span class="d-key">重來選</span><span class="d-val">${esc(d.revisit)}</span></div>`:''}
       ${d.regret_reason?`<div class="d-row"><span class="d-key">後悔原因</span><span class="d-val">${esc(d.regret_reason)}</span></div>`:''}
     </div>`;
-  } else {
+  } else if(status==='decided'){
     h+=reviewForm(d,opts);
   }
 
-  h+=`<button class="btn btn-danger" style="width:100%;margin-top:4px;" onclick="delDecision('${d.id}')">刪除這筆決策</button>`;
+  h+=`<button class="btn btn-danger" style="width:100%;margin-top:4px" onclick="delDecision('${d.id}')">刪除這筆決策</button>`;
   document.getElementById('detail-body').innerHTML=h;
 
   document.querySelectorAll('.star').forEach(s=>s.addEventListener('click',()=>{
@@ -776,112 +642,122 @@ function renderDetail(d) {
   }));
 }
 
-function reviewForm(d,opts) {
+function reviewForm(d,opts){
   const oc=opts.map((o,i)=>`<option value="${esc(o)}">${String.fromCharCode(65+i)}: ${esc(o)}</option>`).join('');
-  return `<div class="d-section" style="border-color:var(--accent);border-width:1.5px;">
-    <div class="d-section-title" style="color:var(--accent);">後驗回顧</div>
+  return `<div class="d-section" style="border-color:var(--accent);border-width:1.5px">
+    <div class="d-section-title" style="color:var(--accent)">後驗回顧</div>
     <div class="form-group"><label class="form-label">滿意度</label><input type="hidden" id="rv-sat" /><div class="stars">${[1,2,3,4,5].map(i=>`<button class="star" data-v="${i}" type="button">★</button>`).join('')}</div></div>
     <div class="form-group"><label class="form-label">有後悔嗎？</label><div class="tag-row"><button class="tag" onclick="pickRvTag(this,'rv-reg','是')">是</button><button class="tag" onclick="pickRvTag(this,'rv-reg','否')">否</button></div><input type="hidden" id="rv-reg" /></div>
     <div class="form-group"><label class="form-label">重來會選？</label><select id="rv-rev"><option value="">選擇</option>${oc}<option value="一樣">一樣的選擇</option></select></div>
-    <div class="form-group" id="rv-rr-grp" style="display:none;"><label class="form-label">後悔原因</label><select id="rv-rr"><option value="">選擇</option><option>品質不如預期</option><option>價格不值得</option><option>其實不需要</option><option>有更好的選擇</option><option>當時是情緒決策</option><option>當時資訊不足</option><option>其他</option></select></div>
-    <button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="saveReview('${d.id}')">儲存回顧</button>
+    <div class="form-group" id="rv-rr-grp" style="display:none"><label class="form-label">後悔原因</label><select id="rv-rr"><option value="">選擇</option><option>品質不如預期</option><option>價格不值得</option><option>其實不需要</option><option>有更好的選擇</option><option>當時是情緒決策</option><option>當時資訊不足</option><option>其他</option></select></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="saveReview('${d.id}')">儲存回顧</button>
   </div>`;
 }
 
-function pickRvTag(el,id,v) {
-  el.closest('.form-group').querySelectorAll('.tag').forEach(t=>t.classList.remove('on')); el.classList.add('on');
+function pickRvTag(el,id,v){
+  el.closest('.form-group').querySelectorAll('.tag').forEach(t=>t.classList.remove('on'));el.classList.add('on');
   document.getElementById(id).value=v;
-  if (id==='rv-reg') document.getElementById('rv-rr-grp').style.display=v==='是'?'block':'none';
+  if(id==='rv-reg')document.getElementById('rv-rr-grp').style.display=v==='是'?'block':'none';
 }
 
-async function saveReview(id) {
+async function saveReview(id){
   const sat=parseInt(document.getElementById('rv-sat').value);
   const reg=document.getElementById('rv-reg').value;
-  if (!sat) { alert('請填滿意度'); return; }
-  if (!reg) { alert('請選是否後悔'); return; }
+  if(!sat){alert('請填滿意度');return;}
+  if(!reg){alert('請選是否後悔');return;}
   const {error}=await DB.from('decisions').update({
-    satisfaction:sat, regret:reg==='是',
+    satisfaction:sat,regret:reg==='是',
     revisit:document.getElementById('rv-rev').value,
     regret_reason:document.getElementById('rv-rr')?.value||''
-  }).eq('id',id);
-  if (error) { alert('儲存失敗'); return; }
-  await loadData(); const u=DATA.find(x=>x.id===id); if(u) renderDetail(u);
+  }).eq('id',id).eq('user_id',ME.id);
+  if(error){alert('儲存失敗：'+error.message);return;}
+  await loadData();
+  const u=DATA.find(x=>x.id===id);if(u)renderDetail(u);
 }
 
-async function delDecision(id) {
-  if (!confirm('確定刪除？')) return;
-  await DB.from('decisions').delete().eq('id',id);
-  await loadData(); showPage('list');
+async function delDecision(id){
+  if(!confirm('確定刪除？'))return;
+  const {error}=await DB.from('decisions').delete().eq('id',id).eq('user_id',ME.id);
+  if(error){alert('刪除失敗：'+error.message);return;}
+  await loadData();showPage('list');
 }
 
-// ══════════════════════════════════════
-//  ADD FORM
-// ══════════════════════════════════════
+// ── ADD FORM ────────────────────────────
 const ABC='ABCDEFGHIJ';
 
-function resetForm() {
+function resetForm(keepId){
+  if(!keepId)editId=null;
   ['f-title','f-ctx'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('f-type').value=''; document.getElementById('f-amount').value='';
-  document.getElementById('f-cur').value='TWD'; document.getElementById('f-delay').value='0';
+  document.getElementById('f-type').value='';
+  document.getElementById('f-amount').value='';
+  document.getElementById('f-cur').value='TWD';
+  document.getElementById('f-delay').value='0';
   document.getElementById('opts-wrap').innerHTML=`
     <div class="option-row"><div class="opt-lbl">A</div><input type="text" placeholder="選項 A" oninput="syncChips()" /></div>
     <div class="option-row"><div class="opt-lbl">B</div><input type="text" placeholder="選項 B" oninput="syncChips()" /></div>`;
   document.getElementById('tend-chips').innerHTML=`<button class="chip" onclick="pickTend('未定')">未定</button>`;
   document.getElementById('final-chips').innerHTML='';
-  document.getElementById('ai-out').innerHTML=''; document.getElementById('ai-out').style.display='none';
-  document.getElementById('ai-loading').style.display='none'; document.getElementById('ai-adopt').style.display='none';
-  document.getElementById('p3-nav').style.display='none'; document.getElementById('p3-actions').style.display='block';
+  document.getElementById('ai-out').innerHTML='';
+  document.getElementById('ai-out').style.display='none';
+  document.getElementById('ai-loading').style.display='none';
+  document.getElementById('ai-adopt').style.display='none';
+  document.getElementById('p3-nav').style.display='none';
+  document.getElementById('p3-actions').style.display='block';
   document.getElementById('reject-grp').style.display='none';
-  selTend=''; selAdopt=''; selFinal=''; aiRes=null;
+  document.getElementById('delay-grp').style.display='none';
+  document.getElementById('add-page-title').textContent='新增決策';
+  selTend='';selAdopt='';selFinal='';aiRes=null;
   goPane(1,true);
 }
 
-function addOpt() {
-  const w=document.getElementById('opts-wrap'), n=w.querySelectorAll('.option-row').length;
-  if (n>=6) { alert('最多6個選項'); return; }
-  const r=document.createElement('div'); r.className='option-row';
-  r.innerHTML=`<div class="opt-lbl">${ABC[n]}</div><input type="text" placeholder="選項 ${ABC[n]}" oninput="syncChips()" /><button class="btn-icon" onclick="this.parentElement.remove();relabelOpts();syncChips();" style="flex-shrink:0;">✕</button>`;
-  w.appendChild(r); syncChips();
+function addOpt(){
+  const w=document.getElementById('opts-wrap'),n=w.querySelectorAll('.option-row').length;
+  if(n>=6){alert('最多6個選項');return;}
+  const r=document.createElement('div');r.className='option-row';
+  r.innerHTML=`<div class="opt-lbl">${ABC[n]}</div><input type="text" placeholder="選項 ${ABC[n]}" oninput="syncChips()" /><button class="btn-icon" onclick="this.parentElement.remove();relabelOpts();syncChips();" style="flex-shrink:0">✕</button>`;
+  w.appendChild(r);syncChips();
 }
 
-function relabelOpts() { document.querySelectorAll('#opts-wrap .opt-lbl').forEach((e,i)=>e.textContent=ABC[i]); }
+function relabelOpts(){document.querySelectorAll('#opts-wrap .opt-lbl').forEach((e,i)=>e.textContent=ABC[i]);}
+function getOpts(){return Array.from(document.querySelectorAll('#opts-wrap input')).map(x=>x.value.trim()).filter(Boolean);}
 
-function getOpts() { return Array.from(document.querySelectorAll('#opts-wrap input')).map(x=>x.value.trim()).filter(Boolean); }
-
-function syncChips() {
+function syncChips(){
   const opts=getOpts();
   document.getElementById('tend-chips').innerHTML=opts.map((o,i)=>{
-    const l=ABC[i], lbl=o?`${l}: ${o.length>9?o.slice(0,9)+'…':o}`:l;
+    const l=ABC[i],lbl=o?`${l}: ${o.length>9?o.slice(0,9)+'…':o}`:l;
     return `<button class="chip${selTend===l?' on':''}" onclick="pickTend('${l}')">${lbl}</button>`;
   }).join('')+`<button class="chip${selTend==='未定'?' on':''}" onclick="pickTend('未定')">未定</button>`;
+
   document.getElementById('final-chips').innerHTML=opts.map((o,i)=>{
-    const l=ABC[i], lbl=o?`${l}: ${o.length>9?o.slice(0,9)+'…':o}`:l;
+    const l=ABC[i],lbl=o?`${l}: ${o.length>9?o.slice(0,9)+'…':o}`:l;
     return `<button class="chip${selFinal===l?' on':''}" onclick="pickFinal('${l}')">${lbl}</button>`;
   }).join('')+`<button class="chip${selFinal==='沒做'?' on':''}" onclick="pickFinal('沒做')">沒做</button>`;
 }
 
-function pickTend(v) { selTend=v; document.querySelectorAll('#tend-chips .chip').forEach(c=>c.classList.toggle('on',c.textContent.startsWith(v)||c.textContent===v)); }
-function pickFinal(v) { selFinal=v; document.querySelectorAll('#final-chips .chip').forEach(c=>c.classList.toggle('on',c.textContent.startsWith(v)||c.textContent===v)); }
-function pickAdopt(v,el) { selAdopt=v; document.querySelectorAll('#ai-adopt .tag').forEach(t=>t.classList.remove('on')); el.classList.add('on'); document.getElementById('reject-grp').style.display=(v==='否'||v==='部分')?'block':'none'; }
+function pickTend(v){selTend=v;document.querySelectorAll('#tend-chips .chip').forEach(c=>c.classList.toggle('on',c.textContent.startsWith(v)||c.textContent===v));}
+function pickFinal(v){
+  selFinal=v;
+  document.querySelectorAll('#final-chips .chip').forEach(c=>c.classList.toggle('on',c.textContent.startsWith(v)||c.textContent===v));
+  document.getElementById('delay-grp').style.display=v?'block':'none';
+}
+function pickAdopt(v,el){selAdopt=v;document.querySelectorAll('#ai-adopt .tag').forEach(t=>t.classList.remove('on'));el.classList.add('on');document.getElementById('reject-grp').style.display=(v==='否'||v==='部分')?'block':'none';}
 
-function goPane(n,silent) {
+function goPane(n,silent){
   document.querySelectorAll('.step-pane').forEach((x,i)=>x.classList.toggle('active',i===n-1));
-  ['sb1','sb2','sb3','sb4'].forEach((id,i)=>{ const e=document.getElementById(id); e.classList.toggle('active',i===n-1); e.classList.toggle('done',i<n-1); });
-  if (!silent) window.scrollTo({top:0,behavior:'smooth'});
+  ['sb1','sb2','sb3','sb4'].forEach((id,i)=>{const e=document.getElementById(id);e.classList.toggle('active',i===n-1);e.classList.toggle('done',i<n-1);});
+  if(!silent)window.scrollTo({top:0,behavior:'smooth'});
 }
 
-// ══════════════════════════════════════
-//  AI
-// ══════════════════════════════════════
-async function runAI() {
+// ── AI ──────────────────────────────────
+async function runAI(){
   const title=document.getElementById('f-title').value.trim();
   const type=document.getElementById('f-type').value;
   const ctx=document.getElementById('f-ctx').value.trim();
   const amt=document.getElementById('f-amount').value;
   const cur=document.getElementById('f-cur').value;
   const opts=getOpts();
-  if (!title) { alert('請先填寫猶豫內容'); goPane(1); return; }
-  if (opts.length<2) { alert('請先填至少2個選項'); goPane(2); return; }
+  if(!title){alert('請先填寫猶豫內容');goPane(1);return;}
+  if(opts.length<2){alert('請先填至少2個選項');goPane(2);return;}
 
   document.getElementById('p3-actions').style.display='none';
   document.getElementById('ai-loading').style.display='flex';
@@ -910,87 +786,111 @@ ${oText}
 }`;
 
   const cfg=getCfg();
-  try {
+  try{
     let text='';
-    if (cfg.aiType==='claude') {
+    if(cfg.aiType==='claude'){
       const r=await fetch('https://api.anthropic.com/v1/messages',{
         method:'POST',
         headers:{'Content-Type':'application/json','x-api-key':cfg.ai,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
         body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})
       });
-      const d=await r.json(); text=d.content?.[0]?.text||'';
+      const d=await r.json();text=d.content?.[0]?.text||'';
     } else {
       const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${cfg.ai}`,{
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
       });
-      const d=await r.json(); text=d.candidates?.[0]?.content?.parts?.[0]?.text||'';
+      const d=await r.json();text=d.candidates?.[0]?.content?.parts?.[0]?.text||'';
     }
     text=text.replace(/```json|```/g,'').trim();
-    const m=text.match(/\{[\s\S]*\}/); if(!m) throw new Error('無法解析回應');
-    const p=JSON.parse(m[0]); aiRes=p;
+    const m=text.match(/\{[\s\S]*\}/);if(!m)throw new Error('無法解析回應');
+    const p=JSON.parse(m[0]);aiRes=p;
     const suggestOpt=opts[ABC.indexOf(p.suggest)]||p.suggest;
-
     document.getElementById('ai-out').innerHTML=`<div class="ai-wrap">
       <div class="ai-head">✦ AI 分析結果</div>
       <div class="ai-box"><div class="ai-box-title">動機拆解</div><div class="ai-box-text">${esc(p.motivations)}</div></div>
       <div class="ai-box"><div class="ai-box-title">後悔風險</div><div class="ai-box-text">${esc(p.regret_risk)}</div></div>
-      <div class="ai-verdict">
-        <div class="verdict-lbl">AI 建議選擇</div>
-        <div class="verdict-val">選 ${p.suggest}：${esc(suggestOpt)}</div>
-        <div class="verdict-conf">信心程度：${p.confidence}</div>
-        ${p.reason?`<div class="verdict-reason">${esc(p.reason)}</div>`:''}
-      </div>
+      <div class="ai-verdict"><div class="verdict-lbl">AI 建議選擇</div><div class="verdict-val">選 ${p.suggest}：${esc(suggestOpt)}</div><div class="verdict-conf">信心程度：${p.confidence}</div>${p.reason?`<div class="verdict-reason">${esc(p.reason)}</div>`:''}</div>
     </div>`;
     document.getElementById('ai-loading').style.display='none';
     document.getElementById('ai-out').style.display='block';
     document.getElementById('ai-adopt').style.display='block';
     document.getElementById('p3-nav').style.display='flex';
-  } catch(e) {
+  } catch(e){
     document.getElementById('ai-loading').style.display='none';
-    document.getElementById('ai-out').innerHTML=`<div style="background:var(--err-l);color:var(--err);border-radius:9px;padding:14px;font-size:14px;">AI 分析失敗：${e.message}<br><br>請點右上角 ⚙️ 確認 API Key 是否正確。</div>`;
+    document.getElementById('ai-out').innerHTML=`<div style="background:var(--err-l);color:var(--err);border-radius:9px;padding:14px;font-size:14px">AI 分析失敗：${e.message}<br><br>請點右上角 ⚙️ 確認 API Key 是否正確。</div>`;
     document.getElementById('ai-out').style.display='block';
     document.getElementById('p3-nav').style.display='flex';
     document.getElementById('p3-actions').style.display='block';
   }
 }
 
-function skipAI() { aiRes=null; syncChips(); goPane(4); }
+function skipAI(){aiRes=null;syncChips();goPane(4);}
 
-// ══════════════════════════════════════
-//  SAVE
-// ══════════════════════════════════════
-async function saveDecision() {
+// ── SAVE ────────────────────────────────
+async function saveDecision(mode){
   const title=document.getElementById('f-title').value.trim();
   const type=document.getElementById('f-type').value;
   const opts=getOpts();
-  if (!title) { alert('請填寫猶豫內容'); goPane(1); return; }
-  if (!type)  { alert('請選擇類型');      goPane(1); return; }
-  if (opts.length<2) { alert('請填至少2個選項'); goPane(2); return; }
-  const rd=new Date(); rd.setDate(rd.getDate()+7);
-  const {error}=await DB.from('decisions').insert([{
-    user_id:ME.id, title, type, options:opts,
+
+  if(!title){alert('請填寫猶豫內容');goPane(1);return;}
+  if(!type){alert('請選擇類型');goPane(1);return;}
+  if(opts.length<2){alert('請填至少2個選項');goPane(2);return;}
+
+  // If mode=decided but no final choice selected, warn
+  if(mode==='decided'&&!selFinal){
+    if(!confirm('還沒選擇最終選項，確定要儲存為「已決策」嗎？'))return;
+  }
+
+  const rd=new Date();rd.setDate(rd.getDate()+7);
+
+  const payload={
+    title,type,options:opts,
     tendency:selTend||null,
     amount:document.getElementById('f-amount').value?parseFloat(document.getElementById('f-amount').value):null,
     currency:document.getElementById('f-cur').value,
     context:document.getElementById('f-ctx').value.trim()||null,
-    ai_analysis:aiRes||null, ai_suggest:aiRes?.suggest||null, ai_confidence:aiRes?.confidence||null,
-    adopted:selAdopt||null, reject_reason:document.getElementById('f-reject')?.value||null,
+    ai_analysis:aiRes||null,
+    ai_suggest:aiRes?.suggest||null,
+    ai_confidence:aiRes?.confidence||null,
+    adopted:selAdopt||null,
+    reject_reason:document.getElementById('f-reject')?.value||null,
     final_choice:selFinal||null,
     decision_delay:parseInt(document.getElementById('f-delay').value)||0,
-    review_due:rd.toISOString().split('T')[0]
-  }]);
-  if (error) { alert('儲存失敗：'+error.message); return; }
-  await loadData(); showPage('list');
+    review_due:mode==='decided'?rd.toISOString().split('T')[0]:null
+  };
+
+  // Disable buttons
+  document.getElementById('save-draft-btn').disabled=true;
+  document.getElementById('save-final-btn').disabled=true;
+
+  let error;
+  if(editId){
+    // UPDATE existing draft
+    const res=await DB.from('decisions').update(payload).eq('id',editId).eq('user_id',ME.id);
+    error=res.error;
+  } else {
+    // INSERT new
+    payload.user_id=ME.id;
+    const res=await DB.from('decisions').insert([payload]);
+    error=res.error;
+  }
+
+  document.getElementById('save-draft-btn').disabled=false;
+  document.getElementById('save-final-btn').disabled=false;
+
+  if(error){alert('儲存失敗：'+error.message);console.error('save error:',error);return;}
+
+  editId=null;
+  await loadData();
+  showPage('list');
 }
 
-// ══════════════════════════════════════
-//  STATS
-// ══════════════════════════════════════
-async function buildStats() {
+// ── STATS ────────────────────────────────
+async function buildStats(){
   await loadData();
-  const d=DATA, el=document.getElementById('stats-body');
-  if (!d.length) { el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><h3>還沒有足夠資料</h3><p>多記錄幾筆後這裡會顯示你的決策模式</p></div>`; return; }
+  const d=DATA,el=document.getElementById('stats-body');
+  if(!d.length){el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><h3>還沒有足夠資料</h3><p>多記錄幾筆後這裡會顯示你的決策模式</p></div>`;return;}
 
   const wr=d.filter(x=>x.satisfaction);
   const rr=wr.length?Math.round(d.filter(x=>x.regret).length/wr.length*100):null;
@@ -1000,6 +900,10 @@ async function buildStats() {
   const na=d.filter(x=>x.adopted==='否'&&x.regret!==null);
   const nr=na.length?Math.round(na.filter(x=>x.regret).length/na.length*100):null;
 
+  const draft=d.filter(x=>getStatus(x)==='draft').length;
+  const decided=d.filter(x=>getStatus(x)==='decided').length;
+  const reviewed=d.filter(x=>getStatus(x)==='reviewed').length;
+
   el.innerHTML=`
     <div class="stat-grid">
       <div class="stat-card"><div class="stat-lbl">總決策數</div><div class="stat-val">${d.length}</div><div class="stat-sub">筆紀錄</div></div>
@@ -1007,17 +911,25 @@ async function buildStats() {
       <div class="stat-card"><div class="stat-lbl">AI 採用率</div><div class="stat-val">${ar!==null?ar+'%':'—'}</div><div class="stat-sub">${at} 筆有分析</div></div>
       <div class="stat-card"><div class="stat-lbl">平均滿意度</div><div class="stat-val">${as||'—'}</div><div class="stat-sub">滿分 5 分</div></div>
     </div>
-    ${nr!==null?`<div class="card" style="background:var(--warn-l);border-color:rgba(184,154,106,.3);">
-      <div style="font-size:13px;font-weight:600;color:var(--warn);margin-bottom:3px;">不聽 AI → 後悔率</div>
-      <div style="font-size:30px;font-weight:700;color:var(--warn);font-family:'DM Mono',monospace;">${nr}%</div>
-      <div style="font-size:12px;color:#8B6A30;margin-top:2px;">共 ${na.length} 筆未採用 AI</div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-lbl">考慮中</div><div class="stat-val" style="color:var(--warn)">${draft}</div><div class="stat-sub">尚未決策</div></div>
+      <div class="stat-card"><div class="stat-lbl">已決策</div><div class="stat-val" style="color:var(--blue)">${decided}</div><div class="stat-sub">等待回顧</div></div>
+    </div>
+    ${nr!==null?`<div class="card" style="background:var(--warn-l);border-color:rgba(184,154,106,.3)">
+      <div style="font-size:13px;font-weight:600;color:var(--warn);margin-bottom:3px">不聽 AI → 後悔率</div>
+      <div style="font-size:30px;font-weight:700;color:var(--warn);font-family:'DM Mono',monospace">${nr}%</div>
+      <div style="font-size:12px;color:#8B6A30;margin-top:2px">共 ${na.length} 筆未採用 AI</div>
     </div>`:''}
+    <div class="chart-card"><div class="chart-title">決策狀態分佈</div><div class="chart-wrap"><canvas id="c-status"></canvas></div></div>
     <div class="chart-card"><div class="chart-title">決策類型分佈</div><div class="chart-wrap"><canvas id="c-type"></canvas></div></div>
     <div class="chart-card"><div class="chart-title">各類型後悔率</div><div class="chart-wrap"><canvas id="c-reg"></canvas></div></div>
     <div class="chart-card"><div class="chart-title">未採用 AI 的原因</div><div class="chart-wrap"><canvas id="c-rej"></canvas></div></div>`;
 
-  Object.values(charts).forEach(c=>c.destroy()); charts={};
-  const types=['購物','投資','生活'], colors=['#E8B4BC','#9EB8CC','#C4B8D8'];
+  Object.values(charts).forEach(c=>c.destroy());charts={};
+
+  charts.status=new Chart(document.getElementById('c-status'),{type:'doughnut',data:{labels:['考慮中','已決策','已回顧'],datasets:[{data:[draft,decided,reviewed],backgroundColor:['#F5EFE6','#E7EFF6','#EBF3EA'],borderColor:['#B89A6A','#7E9CB6','#8FAA8A'],borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right'}}}});
+
+  const types=['購物','投資','生活'],colors=['#E8B4BC','#9EB8CC','#C4B8D8'];
   charts.type=new Chart(document.getElementById('c-type'),{type:'doughnut',data:{labels:types,datasets:[{data:types.map(t=>d.filter(x=>x.type===t).length),backgroundColor:colors,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right'}}}});
   charts.reg=new Chart(document.getElementById('c-reg'),{type:'bar',data:{labels:types,datasets:[{label:'後悔率%',data:types.map(t=>{const rv=d.filter(x=>x.type===t&&x.satisfaction);return rv.length?Math.round(rv.filter(x=>x.regret).length/rv.length*100):0;}),backgroundColor:colors,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{max:100,ticks:{callback:v=>v+'%'}}}}});
   const rm=d.filter(x=>x.reject_reason).reduce((a,x)=>{a[x.reject_reason]=(a[x.reject_reason]||0)+1;return a;},{});
@@ -1025,15 +937,8 @@ async function buildStats() {
   charts.rej=new Chart(document.getElementById('c-rej'),{type:'bar',data:{labels:rk.length?rk:['尚無資料'],datasets:[{label:'次數',data:rk.length?rk.map(k=>rm[k]):[0],backgroundColor:'#C4B8D8',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}}}});
 }
 
-// ══════════════════════════════════════
-//  UTILS
-// ══════════════════════════════════════
-function esc(s) { if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-/*
-  【Supabase 必要 SQL】上傳前請在 Supabase SQL Editor 執行：
-  ALTER TABLE decisions ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'TWD';
-*/
+// ── UTILS ────────────────────────────────
+function esc(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 </script>
 </body>
 </html>
