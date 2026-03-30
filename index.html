@@ -481,7 +481,15 @@ function boot(){
   }
 
   // 有設定 → 建立 DB 連線並監聽登入狀態
-  DB=createClient(url,supa);
+  // Safari lock bug fix: use custom storage without Web Locks
+  const customStorage = {
+    getItem: (key) => { try { return localStorage.getItem(key); } catch(e) { return null; } },
+    setItem: (key, val) => { try { localStorage.setItem(key, val); } catch(e) {} },
+    removeItem: (key) => { try { localStorage.removeItem(key); } catch(e) {} }
+  };
+  DB = createClient(url, supa, {
+    auth: { storage: customStorage, storageKey: 'dm-auth', flowType: 'pkce', autoRefreshToken: true, persistSession: true, detectSessionInUrl: false }
+  });
   document.getElementById('auth-screen').style.display='flex';
 
   DB.auth.onAuthStateChange(async(_,sess)=>{
@@ -607,7 +615,7 @@ function renderList(){
       ${pend?`<div class="pending-banner">⏰ 後驗回顧時間到了！</div>`:''}
       <div class="card-actions">
         <button class="btn btn-secondary" style="flex:1;font-size:13px" onclick="openDetail('${d.id}')">查看詳情</button>
-        ${status==='draft'?`<button class="btn btn-draft" style="flex:1;font-size:13px" onclick="editDecision('${d.id}')">填寫結果</button>`:''}
+        <button class="btn btn-draft" style="flex:1;font-size:13px" onclick="editDecision('${d.id}')">✏️ 編輯</button>
         ${pend?`<button class="btn btn-primary" style="flex:1;font-size:13px" onclick="openDetail('${d.id}')">填寫回顧</button>`:''}
       </div>
     </div>`;
@@ -621,36 +629,85 @@ function setFilter(f,el){
   renderList();
 }
 
-// ── EDIT (fill result for draft) ─────────
+// ── EDIT ─────────────────────────────────
 function editDecision(id){
   const d=DATA.find(x=>x.id===id);
   if(!d)return;
   editId=id;
-  // Pre-fill form with existing data
   resetForm(true);
+
+  // Fill step 1
   document.getElementById('f-title').value=d.title||'';
   document.getElementById('f-type').value=d.type||'';
   document.getElementById('f-amount').value=d.amount||'';
   document.getElementById('f-cur').value=d.currency||'TWD';
   document.getElementById('f-ctx').value=d.context||'';
-  // Restore options
+
+  // Fill step 2 options
   const opts=Array.isArray(d.options)?d.options:[];
   const wrap=document.getElementById('opts-wrap');
   wrap.innerHTML='';
-  opts.forEach((o,i)=>{
-    const row=document.createElement('div');row.className='option-row';
-    row.innerHTML=`<div class="opt-lbl">${ABC[i]}</div><input type="text" value="${esc(o)}" oninput="syncChips()" />`;
-    wrap.appendChild(row);
-  });
-  if(opts.length<2){
+  if(opts.length>=2){
+    opts.forEach((o,i)=>{
+      const row=document.createElement('div');row.className='option-row';
+      row.innerHTML=`<div class="opt-lbl">${ABC[i]}</div><input type="text" value="${esc(o)}" oninput="syncChips()" />`;
+      wrap.appendChild(row);
+    });
+  } else {
     wrap.innerHTML=`<div class="option-row"><div class="opt-lbl">A</div><input type="text" placeholder="選項 A" oninput="syncChips()" /></div><div class="option-row"><div class="opt-lbl">B</div><input type="text" placeholder="選項 B" oninput="syncChips()" /></div>`;
   }
-  selTend=d.tendency||'';
+
+  // Restore tendency
+  selTend=d.tendency||'未定';
   syncChips();
   if(selTend) pickTend(selTend);
-  document.getElementById('add-page-title').textContent='填寫決策結果';
+
+  // Restore AI result if exists
+  if(d.ai_analysis){
+    aiRes=d.ai_analysis;
+    aiRes.suggest=d.ai_suggest||null;
+    aiRes.confidence=d.ai_confidence||null;
+  }
+
+  // Restore adopt
+  selAdopt=d.adopted||'';
+  if(selAdopt){
+    document.querySelectorAll('#ai-adopt .tag').forEach(t=>{
+      if(t.textContent===selAdopt) t.classList.add('on');
+    });
+    if(selAdopt==='否'||selAdopt==='部分'){
+      document.getElementById('reject-grp').style.display='block';
+      if(d.reject_reason) document.getElementById('f-reject').value=d.reject_reason;
+    }
+    document.getElementById('ai-adopt').style.display='block';
+  }
+
+  // Restore final choice
+  selFinal=d.final_choice||'';
+  syncChips();
+  if(selFinal){
+    pickFinal(selFinal);
+    document.getElementById('delay-grp').style.display='block';
+    document.getElementById('f-delay').value=d.decision_delay||0;
+  }
+
+  document.getElementById('add-page-title').textContent='編輯決策';
   showPage('add');
-  goPane(4);
+  goPane(1); // Start from step 1 so user can review everything
+}
+
+// Quick finalize draft without going through edit form
+async function quickFinalize(id){
+  const d=DATA.find(x=>x.id===id);
+  if(!d)return;
+  if(!confirm('確定要將這筆決策標記為「已決策」嗎？'))return;
+  const rd=new Date();rd.setDate(rd.getDate()+7);
+  const {error}=await DB.from('decisions')
+    .update({review_due:rd.toISOString().split('T')[0]})
+    .eq('id',id).eq('user_id',ME.id);
+  if(error){alert('更新失敗：'+error.message);return;}
+  await loadData();
+  const u=DATA.find(x=>x.id===id);if(u)renderDetail(u);
 }
 
 // ── DETAIL ──────────────────────────────
@@ -704,9 +761,14 @@ function renderDetail(d){
     ${d.decision_delay?`<div class="d-row"><span class="d-key">延遲</span><span class="d-val">${d.decision_delay} 天</span></div>`:''}
   </div>`;
 
-  if(status==='draft'){
-    h+=`<button class="btn btn-draft" style="width:100%;margin-bottom:10px" onclick="editDecision('${d.id}')">✏️ 填寫最終結果</button>`;
-  }
+  // Always show edit button for all statuses
+  h+=`<div class="d-section" style="background:var(--surface2);border:none;padding:.75rem">
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:500">管理這筆決策</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-draft" style="flex:1;font-size:13px;min-width:120px" onclick="editDecision('${d.id}')">✏️ 編輯決策</button>
+      ${status==='draft'?`<button class="btn btn-primary" style="flex:1;font-size:13px;min-width:120px" onclick="quickFinalize('${d.id}')">✓ 標記已決策</button>`:''}
+    </div>
+  </div>`;
 
   if(d.satisfaction){
     h+=`<div class="d-section">
