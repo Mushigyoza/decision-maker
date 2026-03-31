@@ -929,6 +929,12 @@ function resetForm(keepId){
   document.getElementById('delay-grp').style.display='none';
   document.getElementById('add-page-title').textContent='新增決策';
   selTend='';selAdopt='';selFinal='';aiRes=null;
+  // Always reset save buttons to clean state
+  const db=document.getElementById('save-draft-btn');
+  const fb=document.getElementById('save-final-btn');
+  if(db){db.disabled=false;db.textContent='📌 暫存考慮中';}
+  if(fb){fb.disabled=false;fb.textContent='✓ 儲存完整決策';}
+  hideSaveMsg();
   goPane(1,true);
 }
 
@@ -1106,20 +1112,30 @@ async function saveDecision(mode){
   const rejectEl=document.getElementById('f-reject');
   if(rejectEl&&rejectEl.value) rejectReason=rejectEl.value;
 
+  // Sanitize values to avoid check constraint violations
+  const validConfidence = ['高','中','低'];
+  const aiConfidence = aiRes?.confidence && validConfidence.includes(aiRes.confidence) ? aiRes.confidence : null;
+  const aiSuggest = aiRes?.suggest && aiRes.suggest.trim() ? aiRes.suggest.trim() : null;
+  const adopted = selAdopt && ['是','否','部分'].includes(selAdopt) ? selAdopt : null;
+  const tendency = selTend || null;
+  const finalChoice = selFinal || null;
+  const context = document.getElementById('f-ctx')?.value.trim() || null;
+  const currency = document.getElementById('f-cur')?.value || 'TWD';
+
   const payload={
     title,
     type,
     options:opts,
-    tendency:selTend||null,
+    tendency,
     amount,
-    currency:document.getElementById('f-cur')?.value||'TWD',
-    context:document.getElementById('f-ctx')?.value.trim()||null,
+    currency,
+    context,
     ai_analysis:aiRes||null,
-    ai_suggest:aiRes?.suggest||null,
-    ai_confidence:aiRes?.confidence||null,
-    adopted:selAdopt||null,
-    reject_reason:rejectReason,
-    final_choice:selFinal||null,
+    ai_suggest:aiSuggest,
+    ai_confidence:aiConfidence,
+    adopted,
+    reject_reason:rejectReason||null,
+    final_choice:finalChoice,
     decision_delay:decDelay,
     review_due:mode==='decided'?rd.toISOString().split('T')[0]:null
   };
@@ -1188,6 +1204,7 @@ async function saveDecision(mode){
     }
 
     showSaveMsg('✓ 儲存成功！正在跳轉…',true);
+    resetBtns(); // Always reset buttons after success too
     editId=null;
     await loadData();
     setTimeout(()=>showPage('list'),800);
