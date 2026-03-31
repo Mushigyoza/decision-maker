@@ -569,7 +569,7 @@ function showPage(p){
   document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
   if(p==='list'){document.getElementById('nav-list').classList.add('active');loadData();}
-  if(p==='add'){resetForm();}
+  if(p==='add'&&!editId){resetForm();}  // don't reset if editing
   if(p==='stats'){document.getElementById('nav-stats').classList.add('active');buildStats();}
   window.scrollTo({top:0});
 }
@@ -744,8 +744,12 @@ function editDecision(id){
   }
 
   document.getElementById('add-page-title').textContent='編輯決策';
-  showPage('add');
-  goPane(1); // Start from step 1 so user can review everything
+  // Navigate to add page WITHOUT resetting (editId is already set)
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-add').classList.add('active');
+  window.scrollTo({top:0});
+  goPane(1);
 }
 
 // Quick finalize draft without going through edit form
